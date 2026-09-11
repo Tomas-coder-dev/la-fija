@@ -72,7 +72,7 @@ class SupabaseService {
     await _client.from('gastos').insert({
       'tarjeta_id': tarjetaId,
       'monto': monto,
-      'fecha_consumo': DateTime.now().toIso8601String(),
+      'fecha_consumo': DateTime.now().toUtc().toIso8601String(),
     });
   }
 
