@@ -36,14 +36,18 @@ class CardProgressWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: bankData.backgroundColors,
+        color: const Color(0xFF1A1A2E), // Color de fondo por defecto si la imagen no carga rápido
+        image: DecorationImage(
+          image: AssetImage(bankData.assetPath),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+            Colors.black.withOpacity(0.1), // Un pequeño filtro oscuro para que las letras resalten
+            BlendMode.darken,
+          ),
         ),
         boxShadow: [
           BoxShadow(
-            color: bankData.backgroundColors.first.withOpacity(0.4),
+            color: Colors.black.withOpacity(0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
