@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -61,7 +62,334 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return 'Buenas noches';
   }
 
-  // ======= MODALS =======
+  String _formatRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final expDate = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(expDate).inDays;
+
+    if (diff == 0) {
+      return 'Hoy, ${DateFormat('HH:mm').format(date)}';
+    } else if (diff == 1) {
+      return 'Ayer, ${DateFormat('HH:mm').format(date)}';
+    } else if (diff < 7 && diff > 0) {
+      return 'Hace $diff días';
+    } else {
+      return DateFormat('dd MMM, HH:mm', 'es_PE').format(date);
+    }
+  }
+
+  // ======= MODAL DETALLE DE TARJETA =======
+
+  void _showCardDetailModal(_CardWithExpenses item) {
+    final bankData = BankCatalog.getBankData(item.card.banco);
+    final cycleExpenses = _service.getCurrentCycleExpenses(item.card, item.expenses);
+    cycleExpenses.sort((a, b) => b.fechaConsumo.compareTo(a.fechaConsumo));
+    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+    final totalCycleSpent = _service.getCurrentCycleConsumption(item.card, item.expenses);
+    final daysRemaining = _service.getDaysUntilCycleEnd(item.card);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Container(
+              margin: const EdgeInsets.only(top: 50),
+              decoration: const BoxDecoration(
+                color: Color(0xFF141428),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle Bar & Header
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Card Mini Visual Header
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [bankData.primaryColor, bankData.secondaryColor],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: bankData.primaryColor.withOpacity(0.3),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.credit_card_rounded, color: Colors.white, size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${item.card.banco} · ${item.card.nombreTarjeta}',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  'Límite: ${currencyFmt.format(item.card.limiteCredito)} · Cierra día ${item.card.diaCierre}',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _showDeleteCardConfirmation(item.card);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Quick Stats Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E38),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Gastado en ciclo', style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+                                const SizedBox(height: 4),
+                                Text(currencyFmt.format(totalCycleSpent), style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E38),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Días de ciclo', style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+                                const SizedBox(height: 4),
+                                Text('$daysRemaining días restantes', style: GoogleFonts.inter(color: Colors.amberAccent, fontSize: 14, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Section Title
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Gastos del ciclo actual (${cycleExpenses.length})',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          'Desliza para borrar',
+                          style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Expenses List
+                    Flexible(
+                      child: cycleExpenses.isEmpty
+                          ? Container(
+                              padding: const EdgeInsets.all(24),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'No hay gastos registrados en este ciclo.',
+                                style: GoogleFonts.inter(color: Colors.white38, fontSize: 13),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: cycleExpenses.length,
+                              itemBuilder: (ctx, idx) {
+                                final exp = cycleExpenses[idx];
+                                final catData = ExpenseCategory.fromKey(exp.categoria);
+
+                                return Dismissible(
+                                  key: Key(exp.id),
+                                  direction: DismissDirection.endToStart,
+                                  background: Container(
+                                    alignment: Alignment.centerRight,
+                                    padding: const EdgeInsets.only(right: 20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent.withOpacity(0.8),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.delete_rounded, color: Colors.white),
+                                  ),
+                                  onDismissed: (_) async {
+                                    await _service.deleteExpense(exp.id);
+                                    setModalState(() {
+                                      cycleExpenses.removeAt(idx);
+                                    });
+                                    _refresh();
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1E1E38),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: catData.color.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Center(
+                                            child: Text(catData.emoji, style: const TextStyle(fontSize: 16)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                catData.label,
+                                                style: GoogleFonts.inter(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              Text(
+                                                _formatRelativeDate(exp.fechaConsumo),
+                                                style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Text(
+                                          currencyFmt.format(exp.monto),
+                                          style: GoogleFonts.inter(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ======= ELIMINAR TARJETA =======
+
+  void _showDeleteCardConfirmation(CreditCard card) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E38),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('¿Eliminar tarjeta?', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w800)),
+        content: Text(
+          'Se eliminará "${card.banco} ${card.nombreTarjeta}" y todos los gastos registrados en ella.',
+          style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancelar', style: GoogleFonts.inter(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await _service.deleteCard(card.id);
+                _refresh();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Tarjeta eliminada correctamente')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al eliminar: $e')),
+                  );
+                }
+              }
+            },
+            child: Text('Eliminar', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ======= MODALS CREAR Y AGREGAR =======
 
   Future<void> _showAddExpenseModal() async {
     final formKey = GlobalKey<FormState>();
@@ -70,13 +398,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String selectedCategory = 'otros';
 
     List<CreditCard> cards = [];
-    try { cards = await _service.getCards(); } catch (_) {}
+    try {
+      cards = await _service.getCards();
+    } catch (_) {}
 
     if (!mounted) return;
     if (cards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No tienes tarjetas registradas.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No tienes tarjetas registradas.')),
+      );
       return;
     }
+
+    selectedCard = cards.first;
 
     await showModalBottomSheet(
       context: context,
@@ -85,6 +419,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            final currentCardBank = selectedCard != null ? BankCatalog.getBankData(selectedCard!.banco) : null;
+
             return Container(
               margin: const EdgeInsets.only(top: 60),
               decoration: const BoxDecoration(
@@ -93,7 +429,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Padding(
                 padding: EdgeInsets.only(
-                  left: 24, right: 24, top: 28,
+                  left: 24,
+                  right: 24,
+                  top: 28,
                   bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
                 ),
                 child: Form(
@@ -103,10 +441,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Handle bar
                         Center(
                           child: Container(
-                            width: 40, height: 4,
+                            width: 40,
+                            height: 4,
                             decoration: BoxDecoration(
                               color: Colors.white24,
                               borderRadius: BorderRadius.circular(2),
@@ -117,7 +455,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text('Registrar Gasto', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
                         const SizedBox(height: 6),
                         Text('¿En qué gastaste hoy?', style: GoogleFonts.inter(fontSize: 14, color: Colors.white38)),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
+
+                        // Card selector
+                        DropdownButtonFormField<CreditCard>(
+                          decoration: _inputDecoration('Tarjeta de Crédito'),
+                          dropdownColor: const Color(0xFF252540),
+                          style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
+                          value: selectedCard,
+                          hint: Text('Selecciona una tarjeta', style: GoogleFonts.inter(color: Colors.white38)),
+                          items: cards.map((c) {
+                            final bData = BankCatalog.getBankData(c.banco);
+                            return DropdownMenuItem(
+                              value: c,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: bData.primaryColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text('${c.banco} · ${c.nombreTarjeta}', style: GoogleFonts.inter(color: Colors.white)),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) => setModalState(() => selectedCard = val),
+                          validator: (val) => val == null ? 'Selecciona una tarjeta' : null,
+                        ),
+                        const SizedBox(height: 20),
 
                         // Category selector (emoji grid)
                         Text('Categoría', style: GoogleFonts.inter(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -169,27 +539,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Card selector
-                        DropdownButtonFormField<CreditCard>(
-                          decoration: _inputDecoration('Tarjeta'),
-                          dropdownColor: const Color(0xFF252540),
-                          style: GoogleFonts.inter(color: Colors.white),
-                          value: selectedCard,
-                          hint: Text('Selecciona una tarjeta', style: GoogleFonts.inter(color: Colors.white38)),
-                          items: cards.map((c) => DropdownMenuItem(value: c, child: Text('${c.banco} · ${c.nombreTarjeta}', style: GoogleFonts.inter(color: Colors.white)))).toList(),
-                          onChanged: (val) => setModalState(() => selectedCard = val),
-                          validator: (val) => val == null ? 'Selecciona una tarjeta' : null,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Amount
+                        // Amount input
                         TextFormField(
                           controller: montoController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: GoogleFonts.inter(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
-                          decoration: _inputDecoration('Monto').copyWith(
+                          decoration: _inputDecoration('Monto del consumo').copyWith(
                             prefixText: 'S/ ',
-                            prefixStyle: GoogleFonts.inter(color: Colors.white38, fontSize: 22, fontWeight: FontWeight.w700),
+                            prefixStyle: GoogleFonts.inter(color: currentCardBank?.primaryColor ?? Colors.amber, fontSize: 22, fontWeight: FontWeight.w700),
                           ),
                           validator: (val) {
                             if (val == null || val.isEmpty) return 'Ingresa un monto';
@@ -201,10 +558,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                         // Submit button
                         SizedBox(
-                          width: double.infinity, height: 56,
+                          width: double.infinity,
+                          height: 56,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.indigo.shade500,
+                              backgroundColor: currentCardBank?.primaryColor ?? Colors.indigo.shade500,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               elevation: 0,
@@ -220,7 +578,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 if (ctx.mounted) Navigator.of(ctx).pop();
                                 _refresh();
                               } catch (e) {
-                                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                if (ctx.mounted) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                }
                               }
                             },
                             child: Text('Registrar Gasto', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -240,14 +600,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _showAddCardModal() async {
     final formKey = GlobalKey<FormState>();
-    BankData? selectedBank;
-    final nombreController = TextEditingController();
+    BankData selectedBank = BankCatalog.banks.first;
+    final nombreController = TextEditingController(text: selectedBank.network);
     final limiteController = TextEditingController();
     final cierreController = TextEditingController();
     final pagoController = TextEditingController();
-    final metaController = TextEditingController();
-    final membresiaController = TextEditingController(text: '0');
-    String exemptionType = 'monthly_average';
+    final metaController = TextEditingController(text: selectedBank.defaultExemptionTarget.toString());
+    final membresiaController = TextEditingController(text: selectedBank.defaultMembershipFee.toString());
+    String exemptionType = selectedBank.defaultExemptionType;
 
     await showModalBottomSheet(
       context: context,
@@ -257,14 +617,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             return Container(
-              margin: const EdgeInsets.only(top: 60),
+              margin: const EdgeInsets.only(top: 50),
               decoration: const BoxDecoration(
                 color: Color(0xFF141428),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
               child: Padding(
                 padding: EdgeInsets.only(
-                  left: 24, right: 24, top: 28,
+                  left: 24,
+                  right: 24,
+                  top: 28,
                   bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
                 ),
                 child: Form(
@@ -274,10 +636,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Handle bar
                         Center(
                           child: Container(
-                            width: 40, height: 4,
+                            width: 40,
+                            height: 4,
                             decoration: BoxDecoration(
                               color: Colors.white24,
                               borderRadius: BorderRadius.circular(2),
@@ -285,16 +647,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Text('Nueva Tarjeta', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+                        Text('Nueva Tarjeta de Crédito', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
                         const SizedBox(height: 6),
-                        Text('Selecciona tu tarjeta', style: GoogleFonts.inter(fontSize: 14, color: Colors.white38)),
-                        const SizedBox(height: 24),
+                        Text('Elige tu banco y personaliza los detalles', style: GoogleFonts.inter(fontSize: 14, color: Colors.white38)),
+                        const SizedBox(height: 20),
 
-                        // Bank card selector
-                        Text('Diseño de Tarjeta', style: GoogleFonts.inter(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600)),
+                        // Card Preview Banner
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [selectedBank.primaryColor, selectedBank.secondaryColor]),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(color: selectedBank.primaryColor.withOpacity(0.4), blurRadius: 12),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    selectedBank.name,
+                                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    selectedBank.isStrictMonthly ? '⚡ Consumo vital cada mes' : '✨ Meta flexible anual',
+                                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black26,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  'S/ ${membresiaController.text}/año',
+                                  style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Selector de Banco
+                        Text('Banco y Tarjeta', style: GoogleFonts.inter(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         SizedBox(
-                          height: 60,
+                          height: 64,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             itemCount: BankCatalog.banks.length,
@@ -314,7 +720,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
                                   margin: const EdgeInsets.only(right: 10),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
                                     gradient: isSelected
                                         ? LinearGradient(colors: [bank.primaryColor, bank.secondaryColor])
@@ -322,74 +728,134 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     color: isSelected ? null : const Color(0xFF1E1E38),
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
-                                      color: isSelected ? Colors.white24 : Colors.transparent,
+                                      color: isSelected ? Colors.white : Colors.transparent,
                                       width: 1.5,
                                     ),
                                     boxShadow: isSelected
-                                        ? [BoxShadow(color: bank.primaryColor.withOpacity(0.4), blurRadius: 12)]
+                                        ? [BoxShadow(color: bank.primaryColor.withOpacity(0.4), blurRadius: 10)]
                                         : null,
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      bank.name,
-                                      style: GoogleFonts.inter(
-                                        color: Colors.white,
-                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                        fontSize: 13,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        bank.name,
+                                        style: GoogleFonts.inter(
+                                          color: Colors.white,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                    ),
+                                      Text(
+                                        bank.isStrictMonthly ? 'Strict Mensual' : 'Flexible',
+                                        style: GoogleFonts.inter(
+                                          color: Colors.white70,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
                             },
                           ),
                         ),
+
                         const SizedBox(height: 20),
 
-                        TextFormField(controller: nombreController, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Nombre (Ej: Visa, CMR)'), validator: (val) => val!.isEmpty ? 'Requerido' : null),
+                        TextFormField(
+                          controller: nombreController,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Nombre / Tipo (Ej: Visa Signature, Bfree)'),
+                          validator: (val) => val!.isEmpty ? 'Requerido' : null,
+                        ),
                         const SizedBox(height: 14),
-                        TextFormField(controller: limiteController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Límite de Crédito (S/)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
+                        TextFormField(
+                          controller: limiteController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Límite de Crédito (S/)'),
+                          validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null,
+                        ),
                         const SizedBox(height: 14),
                         Row(
                           children: [
-                            Expanded(child: TextFormField(controller: cierreController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Día Cierre'), validator: (val) => int.tryParse(val!) == null ? 'Inválido' : null)),
+                            Expanded(
+                              child: TextFormField(
+                                controller: cierreController,
+                                keyboardType: TextInputType.number,
+                                style: GoogleFonts.inter(color: Colors.white),
+                                decoration: _inputDecoration('Día de Cierre (1-31)'),
+                                validator: (val) {
+                                  final num = int.tryParse(val!);
+                                  if (num == null || num < 1 || num > 31) return 'Día 1-31';
+                                  return null;
+                                },
+                              ),
+                            ),
                             const SizedBox(width: 12),
-                            Expanded(child: TextFormField(controller: pagoController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Día Pago'), validator: (val) => int.tryParse(val!) == null ? 'Inválido' : null)),
+                            Expanded(
+                              child: TextFormField(
+                                controller: pagoController,
+                                keyboardType: TextInputType.number,
+                                style: GoogleFonts.inter(color: Colors.white),
+                                decoration: _inputDecoration('Día de Pago (1-31)'),
+                                validator: (val) {
+                                  final num = int.tryParse(val!);
+                                  if (num == null || num < 1 || num > 31) return 'Día 1-31';
+                                  return null;
+                                },
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(controller: membresiaController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Costo de Membresía (S/)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
+                        TextFormField(
+                          controller: membresiaController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Costo de Membresía Anual (S/)'),
+                          onChanged: (val) => setModalState(() {}),
+                          validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null,
+                        ),
                         const SizedBox(height: 14),
                         DropdownButtonFormField<String>(
-                          decoration: _inputDecoration('Tipo de Meta'),
+                          decoration: _inputDecoration('Requisito de Exoneración'),
                           dropdownColor: const Color(0xFF252540),
                           style: GoogleFonts.inter(color: Colors.white),
                           value: exemptionType,
                           items: const [
                             DropdownMenuItem(value: 'monthly_average', child: Text('Monto de consumo (S/)')),
-                            DropdownMenuItem(value: 'monthly_purchase', child: Text('Cantidad de consumos')),
+                            DropdownMenuItem(value: 'monthly_purchase', child: Text('Cantidad de compras (unidades)')),
                           ],
                           onChanged: (val) => setModalState(() => exemptionType = val!),
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(controller: metaController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Meta (Monto o Cantidad)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
+                        TextFormField(
+                          controller: metaController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Meta (Monto S/ o # de compras)'),
+                          validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null,
+                        ),
                         const SizedBox(height: 28),
 
                         SizedBox(
-                          width: double.infinity, height: 56,
+                          width: double.infinity,
+                          height: 56,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.indigo.shade500,
+                              backgroundColor: selectedBank.primaryColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               elevation: 0,
                             ),
                             onPressed: () async {
-                              if (selectedBank == null) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Selecciona un diseño'))); return; }
                               if (!formKey.currentState!.validate()) return;
                               try {
                                 await _service.addCard(
-                                  banco: selectedBank!.name,
+                                  banco: selectedBank.name,
                                   nombreTarjeta: nombreController.text,
                                   diaCierre: int.parse(cierreController.text),
                                   diaPago: int.parse(pagoController.text),
@@ -402,7 +868,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 if (ctx.mounted) Navigator.of(ctx).pop();
                                 _refresh();
                               } catch (e) {
-                                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                if (ctx.mounted) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                }
                               }
                             },
                             child: Text('Crear Tarjeta', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -437,31 +905,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 8),
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 8),
             ListTile(
               leading: Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(color: Colors.green.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
                 child: const Icon(Icons.add_shopping_cart_rounded, color: Colors.greenAccent, size: 20),
               ),
               title: Text('Registrar Gasto', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-              subtitle: Text('Agrega un consumo', style: GoogleFonts.inter(color: Colors.white38, fontSize: 12)),
-              onTap: () { Navigator.pop(ctx); _showAddExpenseModal(); },
+              subtitle: Text('Agrega un consumo a tu tarjeta', style: GoogleFonts.inter(color: Colors.white38, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showAddExpenseModal();
+              },
             ),
             Divider(color: Colors.white.withOpacity(0.05), height: 1, indent: 16, endIndent: 16),
             ListTile(
               leading: Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
                 child: const Icon(Icons.credit_card_rounded, color: Colors.indigoAccent, size: 20),
               ),
               title: Text('Nueva Tarjeta', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
               subtitle: Text('Registra una tarjeta de crédito', style: GoogleFonts.inter(color: Colors.white38, fontSize: 12)),
-              onTap: () { Navigator.pop(ctx); _showAddCardModal(); },
+              onTap: () {
+                Navigator.pop(ctx);
+                _showAddCardModal();
+              },
             ),
             const SizedBox(height: 12),
           ],
@@ -482,7 +959,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ======= TABS =======
+  // ======= TABS DE LA NAVEGACIÓN =======
 
   Widget _buildTarjetasTab(List<_CardWithExpenses> data, NumberFormat currencyFormat) {
     if (data.isEmpty) {
@@ -491,7 +968,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: Colors.indigo.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
@@ -524,18 +1002,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (constraints.maxWidth > 768) {
           return GridView.builder(
             padding: const EdgeInsets.all(20),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 450, mainAxisSpacing: 20, crossAxisSpacing: 20, childAspectRatio: 1.2),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 450,
+              mainAxisSpacing: 20,
+              crossAxisSpacing: 20,
+              childAspectRatio: 1.15,
+            ),
             itemCount: data.length,
-            itemBuilder: (ctx, i) => CardProgressWidget(card: data[i].card, consumption: _service.getCurrentCycleConsumption(data[i].card, data[i].expenses), currencyFormat: currencyFormat),
+            itemBuilder: (ctx, i) {
+              final item = data[i];
+              return CardProgressWidget(
+                card: item.card,
+                consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
+                currencyFormat: currencyFormat,
+                daysRemaining: _service.getDaysUntilCycleEnd(item.card),
+                onTap: () => _showCardDetailModal(item),
+                onDelete: () => _showDeleteCardConfirmation(item.card),
+              );
+            },
           );
         }
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: data.length,
-          itemBuilder: (ctx, i) => Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: CardProgressWidget(card: data[i].card, consumption: _service.getCurrentCycleConsumption(data[i].card, data[i].expenses), currencyFormat: currencyFormat),
-          ),
+          itemBuilder: (ctx, i) {
+            final item = data[i];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: CardProgressWidget(
+                card: item.card,
+                consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
+                currencyFormat: currencyFormat,
+                daysRemaining: _service.getDaysUntilCycleEnd(item.card),
+                onTap: () => _showCardDetailModal(item),
+                onDelete: () => _showDeleteCardConfirmation(item.card),
+              ),
+            );
+          },
         );
       },
     );
@@ -543,7 +1046,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildGastosTab(List<_CardWithExpenses> data, NumberFormat currencyFormat) {
     final allExpenses = <Expense>[];
-    for (var item in data) { allExpenses.addAll(item.expenses); }
+    for (var item in data) {
+      allExpenses.addAll(item.expenses);
+    }
     allExpenses.sort((a, b) => b.fechaConsumo.compareTo(a.fechaConsumo));
 
     if (allExpenses.isEmpty) {
@@ -552,7 +1057,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: Colors.green.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
@@ -568,6 +1074,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
+    final totalSpentOverall = allExpenses.fold(0.0, (sum, e) => sum + e.monto);
+
     // Group by category
     final grouped = <String, List<Expense>>{};
     for (final exp in allExpenses) {
@@ -576,78 +1084,177 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final categoryKeys = grouped.keys.toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: categoryKeys.length,
-      itemBuilder: (ctx, catIndex) {
-        final catKey = categoryKeys[catIndex];
-        final catData = ExpenseCategory.fromKey(catKey);
-        final expenses = grouped[catKey]!;
-        final subtotal = expenses.fold(0.0, (sum, e) => sum + e.monto);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Category header
-            Container(
-              margin: const EdgeInsets.only(bottom: 8, top: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: catData.color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: catData.color.withOpacity(0.2)),
-              ),
-              child: Row(
+    return Column(
+      children: [
+        // Total Spent Summary Header
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E38),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.indigo.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(catData.emoji, style: const TextStyle(fontSize: 22)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      catData.label,
-                      style: GoogleFonts.inter(color: catData.color, fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                  Text('Gasto Total Registrado', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+                  const SizedBox(height: 4),
                   Text(
-                    currencyFormat.format(subtotal),
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                    currencyFormat.format(totalSpentOverall),
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
-            ),
-
-            // Expense items
-            ...expenses.map((exp) {
-              final card = data.firstWhere((c) => c.card.id == exp.tarjetaId).card;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 4, left: 8),
-                child: ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  tileColor: const Color(0xFF1A1A30),
-                  leading: Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: catData.color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(child: Text(catData.emoji, style: const TextStyle(fontSize: 16))),
-                  ),
-                  title: Text(
-                    currencyFormat.format(exp.monto),
-                    style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-                  subtitle: Text(
-                    '${card.banco} · ${DateFormat('dd MMM, HH:mm').format(exp.fechaConsumo)}',
-                    style: GoogleFonts.inter(color: Colors.white38, fontSize: 12),
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Text(
+                  '${allExpenses.length} consumos',
+                  style: GoogleFonts.inter(color: Colors.indigoAccent, fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Expense List Grouped by Category with Swipe-to-Delete
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: categoryKeys.length,
+            itemBuilder: (ctx, catIndex) {
+              final catKey = categoryKeys[catIndex];
+              final catData = ExpenseCategory.fromKey(catKey);
+              final expenses = grouped[catKey]!;
+              final subtotal = expenses.fold(0.0, (sum, e) => sum + e.monto);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category header
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8, top: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: catData.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: catData.color.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(catData.emoji, style: const TextStyle(fontSize: 22)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            catData.label,
+                            style: GoogleFonts.inter(color: catData.color, fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        Text(
+                          currencyFormat.format(subtotal),
+                          style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Expense items with Dismissible
+                  ...expenses.map((exp) {
+                    final cardItem = data.firstWhere(
+                      (c) => c.card.id == exp.tarjetaId,
+                      orElse: () => data.first,
+                    );
+                    final card = cardItem.card;
+                    final bankData = BankCatalog.getBankData(card.banco);
+
+                    return Dismissible(
+                      key: Key(exp.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.delete_rounded, color: Colors.white),
+                      ),
+                      onDismissed: (_) async {
+                        await _service.deleteExpense(exp.id);
+                        _refresh();
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A30),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          leading: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: catData.color.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(child: Text(catData.emoji, style: const TextStyle(fontSize: 18))),
+                          ),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                currencyFormat.format(exp.monto),
+                                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: bankData.primaryColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  card.banco,
+                                  style: GoogleFonts.inter(color: bankData.primaryColor, fontSize: 11, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              _formatRelativeDate(exp.fechaConsumo),
+                              style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.white24, size: 18),
+                            onPressed: () async {
+                              await _service.deleteExpense(exp.id);
+                              _refresh();
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                  if (catIndex < categoryKeys.length - 1) const SizedBox(height: 8),
+                ],
               );
-            }),
-            if (catIndex < categoryKeys.length - 1) const SizedBox(height: 8),
-          ],
-        );
-      },
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -658,7 +1265,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: Colors.amber.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
@@ -666,7 +1274,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: const Icon(Icons.stars_rounded, size: 40, color: Colors.white24),
             ),
             const SizedBox(height: 20),
-            Text('Sin tarjetas', style: GoogleFonts.inter(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.w600)),
+            Text('Sin tarjetas para evaluar membresía', style: GoogleFonts.inter(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.w600)),
           ],
         ),
       );
@@ -675,7 +1283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         const SizedBox(height: 16),
-        // Page indicator dots
+        // Page indicator dots con color propio de cada banco
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(data.length, (i) {
@@ -693,7 +1301,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+
         // Swipeable card ring carousel
         Expanded(
           child: PageView.builder(
@@ -715,6 +1324,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
 
               final progress = targetVal == 0 ? 1.0 : (currentVal / targetVal).clamp(0.0, 1.0);
+              final daysRemaining = _service.getDaysUntilCycleEnd(item.card);
+              final cycleEndDate = _service.getCycleEndDate(item.card);
+
+              // Daily pace required
+              final remaining = (targetVal - currentVal).clamp(0.0, double.infinity);
+              final dailyNeeded = (bankData.isStrictMonthly && !isCountBased && remaining > 0 && daysRemaining > 0)
+                  ? remaining / max(1, daysRemaining)
+                  : 0.0;
 
               String centerLabel;
               if (targetVal == 0) {
@@ -725,14 +1342,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               String statusText;
               if (targetVal == 0) {
-                statusText = 'Sin membresía — ¡Libre! 🎉';
+                statusText = 'Sin membresía — ¡Exonerado!';
               } else if (progress >= 1.0) {
-                statusText = '¡Meta cumplida! 🥳';
+                statusText = '¡Meta cumplida este mes!';
               } else if (isCountBased) {
-                final remaining = (targetVal - currentVal).toInt();
-                statusText = '${currentVal.toInt()} / ${targetVal.toInt()} consumo(s)\nFaltan $remaining consumo(s)';
+                final remCount = (targetVal - currentVal).toInt();
+                statusText = '${currentVal.toInt()} de ${targetVal.toInt()} consumos realizados\nFaltan $remCount compra(s)';
               } else {
-                statusText = '${currencyFormat.format(currentVal)} / ${currencyFormat.format(targetVal)}\nFalta ${currencyFormat.format(targetVal - currentVal)}';
+                statusText = 'Gastaste ${currencyFormat.format(currentVal)} de ${currencyFormat.format(targetVal)}\nFalta: ${currencyFormat.format(targetVal - currentVal)}';
               }
 
               final hasPenalty = item.card.membershipFee > 0;
@@ -740,16 +1357,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
               return Center(
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: ProgressRingWidget(
                       progress: progress,
                       ringColor: bankData.primaryColor,
+                      secondaryColor: bankData.secondaryColor,
                       centerLabel: centerLabel,
                       statusText: statusText,
                       cardName: '${item.card.banco} ${item.card.nombreTarjeta}',
                       showPenalty: hasPenalty,
-                      penaltyText: hasPenalty ? 'Penalidad: ${currencyFormat.format(item.card.membershipFee)}' : '',
-                      size: MediaQuery.of(ctx).size.width * 0.55,
+                      penaltyText: hasPenalty ? 'Membresía anual: ${currencyFormat.format(item.card.membershipFee)}' : '',
+                      isStrictMonthly: bankData.isStrictMonthly,
+                      daysRemaining: daysRemaining,
+                      cycleEndDate: cycleEndDate,
+                      dailyNeeded: dailyNeeded,
+                      currentValue: currentVal,
+                      targetValue: targetVal,
+                      isCountBased: isCountBased,
+                      membershipFee: item.card.membershipFee,
+                      size: MediaQuery.of(ctx).size.width * (bankData.isStrictMonthly ? 0.8 : 0.55),
                     ),
                   ),
                 ),
@@ -757,12 +1383,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
         ),
+
         // Swipe hint
         Padding(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(bottom: 16, top: 4),
           child: Text(
-            data.length > 1 ? '← Desliza para ver otras tarjetas →' : '',
-            style: GoogleFonts.inter(color: Colors.white24, fontSize: 12),
+            data.length > 1 ? '← Desliza para ver tus otras tarjetas →' : '',
+            style: GoogleFonts.inter(color: Colors.white30, fontSize: 12),
           ),
         ),
       ],
@@ -795,7 +1422,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: Container(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
@@ -847,7 +1475,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   const CircularProgressIndicator(color: Colors.indigoAccent, strokeWidth: 3),
                   const SizedBox(height: 16),
-                  Text('Cargando...', style: GoogleFonts.inter(color: Colors.white24, fontSize: 13)),
+                  Text('Cargando datos...', style: GoogleFonts.inter(color: Colors.white24, fontSize: 13)),
                 ],
               ),
             );

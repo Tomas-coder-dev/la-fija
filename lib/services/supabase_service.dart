@@ -49,6 +49,12 @@ class SupabaseService {
     });
   }
 
+  /// Elimina una tarjeta y sus gastos asociados.
+  Future<void> deleteCard(String cardId) async {
+    await _client.from('gastos').delete().eq('tarjeta_id', cardId);
+    await _client.from('tarjetas').delete().eq('id', cardId);
+  }
+
   // ─────────────────────────────────────────
   // GASTOS
   // ─────────────────────────────────────────
@@ -78,9 +84,63 @@ class SupabaseService {
     });
   }
 
+  /// Elimina un gasto por su ID.
+  Future<void> deleteExpense(String expenseId) async {
+    await _client.from('gastos').delete().eq('id', expenseId);
+  }
+
   // ─────────────────────────────────────────
   // MOTOR DEL CICLO DE FACTURACIÓN
   // ─────────────────────────────────────────
+
+  /// Obtiene los gastos dentro del ciclo de facturación ACTUAL.
+  List<Expense> getCurrentCycleExpenses(
+    CreditCard card,
+    List<Expense> expenses,
+  ) {
+    final today = DateTime.now();
+    final diaCierre = card.diaCierre;
+
+    late DateTime cycleStart;
+    late DateTime cycleEnd;
+
+    if (today.day > diaCierre) {
+      cycleStart = DateTime(today.year, today.month, diaCierre + 1);
+      final nextMonth = DateTime(today.year, today.month + 1);
+      cycleEnd = DateTime(nextMonth.year, nextMonth.month, diaCierre, 23, 59, 59);
+    } else {
+      final prevMonth = DateTime(today.year, today.month - 1);
+      cycleStart = DateTime(prevMonth.year, prevMonth.month, diaCierre + 1);
+      cycleEnd = DateTime(today.year, today.month, diaCierre, 23, 59, 59);
+    }
+
+    return expenses
+        .where((e) =>
+            e.tarjetaId == card.id &&
+            !e.fechaConsumo.isBefore(cycleStart) &&
+            !e.fechaConsumo.isAfter(cycleEnd))
+        .toList();
+  }
+
+  /// Obtiene la fecha de finalización del ciclo actual.
+  DateTime getCycleEndDate(CreditCard card) {
+    final today = DateTime.now();
+    final diaCierre = card.diaCierre;
+
+    if (today.day > diaCierre) {
+      final nextMonth = DateTime(today.year, today.month + 1);
+      return DateTime(nextMonth.year, nextMonth.month, diaCierre, 23, 59, 59);
+    } else {
+      return DateTime(today.year, today.month, diaCierre, 23, 59, 59);
+    }
+  }
+
+  /// Calcula los días restantes hasta el final del ciclo actual.
+  int getDaysUntilCycleEnd(CreditCard card) {
+    final cycleEnd = getCycleEndDate(card);
+    final today = DateTime.now();
+    return cycleEnd.difference(today).inDays;
+  }
 
   /// Calcula el consumo total dentro del ciclo de facturación ACTUAL
   /// basándose en el [dia_cierre] de la tarjeta y la fecha de hoy.

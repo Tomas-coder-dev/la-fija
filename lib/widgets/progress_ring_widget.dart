@@ -1,31 +1,53 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
-/// A premium circular progress ring with a star icon in the center.
-/// Inspired by the Meta revenue wheel design.
+/// Un widget de progreso dinámico para la pestaña de Membresía.
+/// Soporta dos diseños visuales distintos:
+/// 1. Tarjetas Estrictas (CMR, Interbank): Enfoque en urgencia, countdown destacado, barra horizontal y gasto diario requerido.
+/// 2. Tarjetas Flexibles (BBVA, BCP): Anillo circular elegante, ritmo relajado e información clara.
 class ProgressRingWidget extends StatefulWidget {
   final double progress; // 0.0 to 1.0
   final Color ringColor;
+  final Color secondaryColor;
   final Color bgRingColor;
-  final String centerLabel; // e.g. "75%"
-  final String statusText; // e.g. "Falta S/ 200"
-  final String cardName;   // e.g. "BCP Platinum VISA"
-  final String penaltyText; // e.g. "Penalidad: S/ 350"
+  final String centerLabel;
+  final String statusText;
+  final String cardName;
+  final String penaltyText;
   final bool showPenalty;
   final double size;
+
+  final bool isStrictMonthly;
+  final int daysRemaining;
+  final DateTime? cycleEndDate;
+  final double dailyNeeded;
+  final double currentValue;
+  final double targetValue;
+  final bool isCountBased;
+  final double membershipFee;
 
   const ProgressRingWidget({
     super.key,
     required this.progress,
     required this.ringColor,
+    this.secondaryColor = const Color(0xFF6366F1),
     this.bgRingColor = const Color(0xFF252540),
     required this.centerLabel,
     required this.statusText,
     required this.cardName,
     this.penaltyText = '',
     this.showPenalty = false,
-    this.size = 220,
+    this.size = 200,
+    this.isStrictMonthly = false,
+    this.daysRemaining = 30,
+    this.cycleEndDate,
+    this.dailyNeeded = 0.0,
+    this.currentValue = 0.0,
+    this.targetValue = 0.0,
+    this.isCountBased = false,
+    this.membershipFee = 0.0,
   });
 
   @override
@@ -44,7 +66,8 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _animation = Tween<double>(begin: 0, end: widget.progress).animate(
+    _animation = Tween<double>(begin: 0, end: widget.progress.clamp(0.0, 1.0))
+        .animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
     _controller.forward();
@@ -54,7 +77,9 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
   void didUpdateWidget(covariant ProgressRingWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.progress != widget.progress) {
-      _animation = Tween<double>(begin: _animation.value, end: widget.progress).animate(
+      _animation = Tween<double>(
+              begin: _animation.value, end: widget.progress.clamp(0.0, 1.0))
+          .animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
       );
       _controller
@@ -69,12 +94,349 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
     super.dispose();
   }
 
+  Color _getCountdownColor(int days) {
+    if (days > 15) return const Color(0xFF10B981); // Verde suave
+    if (days >= 10) return const Color(0xFFFBBF24); // Amarillo
+    if (days >= 5) return const Color(0xFFF97316); // Naranja
+    return const Color(0xFFEF4444); // Rojo urgente
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.isStrictMonthly) {
+      return _buildStrictLayout();
+    }
+    return _buildFlexibleLayout();
+  }
+
+  /// ─────────────────────────────────────────
+  /// DISEÑO 1: TARJETAS ESTRICTAS (CMR / INTERBANK)
+  /// ─────────────────────────────────────────
+  Widget _buildStrictLayout() {
+    final countdownColor = _getCountdownColor(widget.daysRemaining);
+    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+    final dateFmt = widget.cycleEndDate != null
+        ? DateFormat('dd/MM').format(widget.cycleEndDate!)
+        : '--/--';
+    final isCompleted = widget.progress >= 1.0;
+    final remainingAmount = (widget.targetValue - widget.currentValue).clamp(0.0, double.infinity);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E30),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: widget.ringColor.withOpacity(0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: widget.ringColor.withOpacity(0.15),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header: Card Name + Strict Badge
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  widget.cardName,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.bolt, color: Colors.redAccent, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'MENSUAL VITAL',
+                      style: GoogleFonts.inter(
+                        color: Colors.redAccent,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Countdown Chip Prominente
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            decoration: BoxDecoration(
+              color: countdownColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: countdownColor.withOpacity(0.5), width: 1.2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.timer, color: countdownColor, size: 20),
+                const SizedBox(width: 8),
+                RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+                    children: [
+                      const TextSpan(text: 'Quedan '),
+                      TextSpan(
+                        text: '${widget.daysRemaining} días ',
+                        style: TextStyle(
+                          color: countdownColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      TextSpan(text: 'de ciclo (cierra el $dateFmt)'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Horizontal Progress Bar Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Progreso del mes',
+                style: GoogleFonts.inter(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '${(widget.progress * 100).toInt()}%',
+                style: GoogleFonts.inter(
+                  color: widget.ringColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Custom Horizontal Animated Progress Bar
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  Container(
+                    height: 18,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF121220),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  FractionallySizedBox(
+                    widthFactor: _animation.value.clamp(0.0, 1.0),
+                    child: Container(
+                      height: 18,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            widget.ringColor,
+                            widget.secondaryColor,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.ringColor.withOpacity(0.5),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          // Numbers Summary Line
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.isCountBased
+                    ? '${widget.currentValue.toInt()} / ${widget.targetValue.toInt()} compras'
+                    : 'Gastado: ${currencyFmt.format(widget.currentValue)}',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                isCompleted
+                    ? '¡Exonerado! 🎉'
+                    : (widget.isCountBased
+                        ? 'Falta ${remainingAmount.toInt()} compra'
+                        : 'Falta: ${currencyFmt.format(remainingAmount)}'),
+                style: GoogleFonts.inter(
+                  color: isCompleted ? const Color(0xFF10B981) : Colors.amberAccent,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Pace Action Card (Gasta ~S/ X por día)
+          if (!isCompleted && widget.dailyNeeded > 0)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: widget.ringColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: widget.ringColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: widget.ringColor.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.speed_rounded, color: widget.ringColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ritmo diario sugerido',
+                          style: GoogleFonts.inter(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
+                        ),
+                        Text(
+                          'Gasta ~${currencyFmt.format(widget.dailyNeeded)} por día',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (isCompleted)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '¡Excelente! Cumpliste la meta de este mes.',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF10B981),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 12),
+
+          // Penalty Banner
+          if (widget.showPenalty && widget.membershipFee > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2A1520),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Evita la penalidad anual de ${currencyFmt.format(widget.membershipFee)}',
+                      style: GoogleFonts.inter(
+                        color: Colors.redAccent.shade100,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// ─────────────────────────────────────────
+  /// DISEÑO 2: TARJETAS FLEXIBLES (BBVA / BCP)
+  /// ─────────────────────────────────────────
+  Widget _buildFlexibleLayout() {
+    final countdownColor = _getCountdownColor(widget.daysRemaining);
+    final dateFmt = widget.cycleEndDate != null
+        ? DateFormat('dd/MM').format(widget.cycleEndDate!)
+        : '--/--';
+    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Card name
+        // Card Name
         Text(
           widget.cardName,
           style: GoogleFonts.inter(
@@ -86,46 +448,100 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
-        if (widget.showPenalty)
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.redAccent.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
-            ),
-            child: Text(
-              widget.penaltyText,
-              style: GoogleFonts.inter(
-                color: Colors.redAccent,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+
+        // Flexible Chip
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: widget.ringColor.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: widget.ringColor.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.published_with_changes_rounded, color: widget.ringColor, size: 14),
+              const SizedBox(width: 4),
+              Text(
+                'META FLEXIBLE / PROMEDIO',
+                style: GoogleFonts.inter(
+                  color: widget.ringColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Countdown Subtitle
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: countdownColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '🗓️ Cierra $dateFmt (${widget.daysRemaining} días restantes)',
+            style: GoogleFonts.inter(
+              color: countdownColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        if (!widget.showPenalty) const SizedBox(height: 16),
-        // The ring
+        ),
+
+        const SizedBox(height: 16),
+
+        // The Ring
         _AnimatedRing(
           animation: _animation,
           size: widget.size,
           ringColor: widget.ringColor,
+          secondaryColor: widget.secondaryColor,
           bgRingColor: widget.bgRingColor,
           centerLabel: widget.centerLabel,
         ),
-        const SizedBox(height: 20),
+
+        const SizedBox(height: 16),
+
         // Status text
         Text(
           widget.statusText,
           style: GoogleFonts.inter(
             color: widget.progress >= 1.0
-                ? Colors.greenAccent
-                : Colors.white60,
+                ? const Color(0xFF10B981)
+                : Colors.white,
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
         ),
+
+        const SizedBox(height: 8),
+
+        Text(
+          'Vas bien. Puedes compensar consumo en los siguientes meses.',
+          style: GoogleFonts.inter(
+            color: Colors.white54,
+            fontSize: 12,
+          ),
+          textAlign: TextAlign.center,
+        ),
+
+        if (widget.showPenalty && widget.membershipFee > 0) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Membresía anual: ${currencyFmt.format(widget.membershipFee)}',
+            style: GoogleFonts.inter(
+              color: Colors.white38,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -134,12 +550,14 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
 class _RingPainter extends CustomPainter {
   final double progress;
   final Color ringColor;
+  final Color secondaryColor;
   final Color bgRingColor;
   final double strokeWidth;
 
   _RingPainter({
     required this.progress,
     required this.ringColor,
+    required this.secondaryColor,
     required this.bgRingColor,
     required this.strokeWidth,
   });
@@ -171,11 +589,11 @@ class _RingPainter extends CustomPainter {
         startAngle: -pi / 2,
         endAngle: -pi / 2 + sweepAngle,
         colors: [
-          ringColor.withOpacity(0.7),
           ringColor,
-          ringColor.withOpacity(0.9),
+          secondaryColor,
+          ringColor,
         ],
-        stops: const [0.0, 0.5, 1.0],
+        stops: const [0.0, 0.7, 1.0],
         transform: const GradientRotation(-pi / 2),
       ).createShader(rect);
 
@@ -187,13 +605,11 @@ class _RingPainter extends CustomPainter {
       final dotX = center.dx + radius * cos(dotAngle);
       final dotY = center.dy + radius * sin(dotAngle);
 
-      // Outer glow
       final glowPaint = Paint()
-        ..color = ringColor.withOpacity(0.4)
+        ..color = ringColor.withOpacity(0.5)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
       canvas.drawCircle(Offset(dotX, dotY), strokeWidth * 0.6, glowPaint);
 
-      // Inner dot
       final dotPaint = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.fill;
@@ -204,13 +620,15 @@ class _RingPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RingPainter oldDelegate) {
     return oldDelegate.progress != progress ||
-        oldDelegate.ringColor != ringColor;
+        oldDelegate.ringColor != ringColor ||
+        oldDelegate.secondaryColor != secondaryColor;
   }
 }
 
 class _AnimatedRing extends AnimatedWidget {
   final double size;
   final Color ringColor;
+  final Color secondaryColor;
   final Color bgRingColor;
   final String centerLabel;
 
@@ -218,6 +636,7 @@ class _AnimatedRing extends AnimatedWidget {
     required Animation<double> animation,
     required this.size,
     required this.ringColor,
+    required this.secondaryColor,
     required this.bgRingColor,
     required this.centerLabel,
   }) : super(listenable: animation);
@@ -232,6 +651,7 @@ class _AnimatedRing extends AnimatedWidget {
         painter: _RingPainter(
           progress: animation.value,
           ringColor: ringColor,
+          secondaryColor: secondaryColor,
           bgRingColor: bgRingColor,
           strokeWidth: 18,
         ),
@@ -243,12 +663,12 @@ class _AnimatedRing extends AnimatedWidget {
                 shaderCallback: (bounds) => LinearGradient(
                   colors: [
                     ringColor,
-                    ringColor.withOpacity(0.6),
+                    secondaryColor,
                   ],
                 ).createShader(bounds),
                 child: const Icon(
                   Icons.star_rounded,
-                  size: 40,
+                  size: 38,
                   color: Colors.white,
                 ),
               ),
@@ -257,9 +677,9 @@ class _AnimatedRing extends AnimatedWidget {
                 centerLabel,
                 style: GoogleFonts.inter(
                   color: Colors.white,
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -1,
+                  letterSpacing: -0.5,
                 ),
               ),
             ],
