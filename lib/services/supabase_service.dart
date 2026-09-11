@@ -20,6 +20,27 @@ class SupabaseService {
         .toList();
   }
 
+  /// Inserta una nueva tarjeta en la tabla `tarjetas`.
+  Future<void> addCard({
+    required String banco,
+    required String nombreTarjeta,
+    required int diaCierre,
+    required int diaPago,
+    required double metaMensual,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuario no autenticado');
+
+    await _client.from('tarjetas').insert({
+      'user_id': userId,
+      'banco': banco,
+      'nombre_tarjeta': nombreTarjeta,
+      'dia_cierre': diaCierre,
+      'dia_pago': diaPago,
+      'meta_mensual': metaMensual,
+    });
+  }
+
   // ─────────────────────────────────────────
   // GASTOS
   // ─────────────────────────────────────────
