@@ -3,106 +3,69 @@ import 'package:flutter/material.dart';
 class BankData {
   final String name;
   final String logoUrl;
-  final String cardImageUrl;
-  final List<Color> fallbackColors;
-  final Color textColor;
+  final Color primaryColor;
+  final Color secondaryColor;
+  final Color accentColor;
+  final String network;
 
   const BankData({
     required this.name,
     required this.logoUrl,
-    required this.cardImageUrl,
-    required this.fallbackColors,
-    this.textColor = Colors.white,
+    required this.primaryColor,
+    required this.secondaryColor,
+    required this.accentColor,
+    required this.network,
   });
 }
 
 class BankCatalog {
+  // URLs de logos (puedes cambiarlas más adelante si encuentras mejores)
+  static const _bcpLogo = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Logo_BCP.svg/512px-Logo_BCP.svg.png';
+  static const _cmrLogo = 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo_Falabella.svg/512px-Logo_Falabella.svg.png';
+  static const _bbvaLogo = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/BBVA_2019_logo.svg/512px-BBVA_2019_logo.svg.png';
+  static const _interbankLogo = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Interbank_logo.svg/512px-Interbank_logo.svg.png';
+
+  // Imagen por defecto temporal hasta que pongas las tuyas
+  static const _placeholderImg = 'https://images.unsplash.com/photo-1620202685797-2856c80521ce?q=80&w=600&auto=format&fit=crop';
+
   static final List<BankData> banks = [
     // BCP
-    BankData(
-      name: 'BCP Clásica',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Logo_BCP.svg/512px-Logo_BCP.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1605380582239-448f108d4b8e?q=80&w=600&auto=format&fit=crop', // Naranja abstracto
-      fallbackColors: [Colors.orange.shade800, Colors.orange.shade500],
-    ),
-    BankData(
-      name: 'BCP Oro',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Logo_BCP.svg/512px-Logo_BCP.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1618501258602-5e197c36a617?q=80&w=600&auto=format&fit=crop', // Dorado abstracto
-      fallbackColors: [const Color(0xFFD4AF37), const Color(0xFFF3E5AB)],
-      textColor: Colors.black87,
-    ),
-    BankData(
-      name: 'BCP Signature/Black',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Logo_BCP.svg/512px-Logo_BCP.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1620202685797-2856c80521ce?q=80&w=600&auto=format&fit=crop', // Negro abstracto
-      fallbackColors: [const Color(0xFF111111), const Color(0xFF2C2A29)],
-    ),
-    
+    const BankData(name: 'BCP Light', logoUrl: _bcpLogo, primaryColor: Color(0xFFFF7A00), secondaryColor: Color(0xFFFFFFFF), accentColor: Color(0xFF0057A8), network: 'VISA'),
+    const BankData(name: 'BCP Clásica', logoUrl: _bcpLogo, primaryColor: Color(0xFF0057A8), secondaryColor: Color(0xFFFF6B00), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BCP Oro', logoUrl: _bcpLogo, primaryColor: Color(0xFFC99700), secondaryColor: Color(0xFF003B70), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BCP Platinum', logoUrl: _bcpLogo, primaryColor: Color(0xFF243447), secondaryColor: Color(0xFFFF7900), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BCP Signature', logoUrl: _bcpLogo, primaryColor: Color(0xFF102A43), secondaryColor: Color(0xFFD9A441), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BCP Infinite', logoUrl: _bcpLogo, primaryColor: Color(0xFF111111), secondaryColor: Color(0xFFD4AF37), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BCP LATAM Pass', logoUrl: _bcpLogo, primaryColor: Color(0xFF0057A8), secondaryColor: Color(0xFFE31E24), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BCP Amex', logoUrl: _bcpLogo, primaryColor: Color(0xFF1C1C1C), secondaryColor: Color(0xFFD4AF37), accentColor: Color(0xFFFFFFFF), network: 'AMEX'),
+
     // BBVA
-    BankData(
-      name: 'BBVA Clásica',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/BBVA_2019_logo.svg/512px-BBVA_2019_logo.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=600&auto=format&fit=crop', // Azul abstracto
-      fallbackColors: [const Color(0xFF072146), const Color(0xFF1464A5)],
-    ),
-    BankData(
-      name: 'BBVA Black',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/BBVA_2019_logo.svg/512px-BBVA_2019_logo.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop', // Azul oscuro
-      fallbackColors: [const Color(0xFF0F172A), const Color(0xFF1E293B)],
-    ),
+    const BankData(name: 'BBVA Cero', logoUrl: _bbvaLogo, primaryColor: Color(0xFF072146), secondaryColor: Color(0xFF49C5E8), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BBVA Bfree', logoUrl: _bbvaLogo, primaryColor: Color(0xFF004481), secondaryColor: Color(0xFF2DCCCD), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BBVA Clásica', logoUrl: _bbvaLogo, primaryColor: Color(0xFF072146), secondaryColor: Color(0xFF1464A5), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BBVA Oro', logoUrl: _bbvaLogo, primaryColor: Color(0xFFC99700), secondaryColor: Color(0xFF003B70), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BBVA Platinum', logoUrl: _bbvaLogo, primaryColor: Color(0xFF072146), secondaryColor: Color(0xFFB8C7D9), accentColor: Color(0xFF49C5E8), network: 'VISA'),
+    const BankData(name: 'BBVA Signature', logoUrl: _bbvaLogo, primaryColor: Color(0xFF061E3C), secondaryColor: Color(0xFF6EC6E8), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'BBVA Black', logoUrl: _bbvaLogo, primaryColor: Color(0xFF111827), secondaryColor: Color(0xFF4B5563), accentColor: Color(0xFFFFFFFF), network: 'MASTERCARD'),
+    const BankData(name: 'BBVA Infinite', logoUrl: _bbvaLogo, primaryColor: Color(0xFF071D2B), secondaryColor: Color(0xFFB9C7D0), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
 
     // Interbank
-    BankData(
-      name: 'Interbank Clásica',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Interbank_logo.svg/512px-Interbank_logo.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=600&auto=format&fit=crop', // Verde abstracto
-      fallbackColors: [const Color(0xFF009B3A), const Color(0xFF003876)],
-    ),
-    BankData(
-      name: 'Interbank Black/Platinum',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Interbank_logo.svg/512px-Interbank_logo.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1620202685797-2856c80521ce?q=80&w=600&auto=format&fit=crop', // Negro abstracto
-      fallbackColors: [const Color(0xFF1C1C1C), const Color(0xFF383838)],
-    ),
+    const BankData(name: 'Interbank Clásica', logoUrl: _interbankLogo, primaryColor: Color(0xFF00A859), secondaryColor: Color(0xFFFFFFFF), accentColor: Color(0xFF003876), network: 'VISA'),
+    const BankData(name: 'Interbank Oro', logoUrl: _interbankLogo, primaryColor: Color(0xFF00A859), secondaryColor: Color(0xFFD4AF37), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'Interbank Platinum', logoUrl: _interbankLogo, primaryColor: Color(0xFF063B35), secondaryColor: Color(0xFF00A859), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'Interbank Signature', logoUrl: _interbankLogo, primaryColor: Color(0xFF062E2A), secondaryColor: Color(0xFFA7D8D0), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'Interbank Infinite', logoUrl: _interbankLogo, primaryColor: Color(0xFF101C24), secondaryColor: Color(0xFF00A859), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'Interbank Mastercard', logoUrl: _interbankLogo, primaryColor: Color(0xFF151515), secondaryColor: Color(0xFFEB001B), accentColor: Color(0xFFFFFFFF), network: 'MASTERCARD'),
+    const BankData(name: 'Amex Green', logoUrl: _interbankLogo, primaryColor: Color(0xFF0B5D3B), secondaryColor: Color(0xFFC9D6D0), accentColor: Color(0xFFFFFFFF), network: 'AMEX'),
+    const BankData(name: 'Amex Gold', logoUrl: _interbankLogo, primaryColor: Color(0xFF191919), secondaryColor: Color(0xFFD4AF37), accentColor: Color(0xFFFFFFFF), network: 'AMEX'),
+    const BankData(name: 'Amex Platinum', logoUrl: _interbankLogo, primaryColor: Color(0xFFC9CED3), secondaryColor: Color(0xFF263238), accentColor: Color(0xFFFFFFFF), network: 'AMEX'),
+    const BankData(name: 'Amex Black', logoUrl: _interbankLogo, primaryColor: Color(0xFF080808), secondaryColor: Color(0xFFB8B8B8), accentColor: Color(0xFFFFFFFF), network: 'AMEX'),
 
-    // Scotiabank
-    BankData(
-      name: 'Scotiabank',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Scotiabank_Logo.svg/512px-Scotiabank_Logo.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=600&auto=format&fit=crop', // Rojo abstracto
-      fallbackColors: [const Color(0xFFED1B24), const Color(0xFFA10000)],
-    ),
-
-    // Tarjetas de Tiendas (CMR / Ripley)
-    BankData(
-      name: 'CMR Falabella',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo_Falabella.svg/512px-Logo_Falabella.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?q=80&w=600&auto=format&fit=crop', // Verde lima abstracto
-      fallbackColors: [const Color(0xFFB1D235), const Color(0xFF4C9F38)],
-    ),
-    BankData(
-      name: 'Banco Ripley',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Ripley_Peru_Logo.svg/512px-Ripley_Peru_Logo.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop', // Gris abstracto
-      fallbackColors: [const Color(0xFF2C2A29), const Color(0xFF111111)],
-    ),
-    
-    // Diners Club / Premium genérica
-    BankData(
-      name: 'Diners Club',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Diners_Club_Logo3.svg/512px-Diners_Club_Logo3.svg.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1620202685797-2856c80521ce?q=80&w=600&auto=format&fit=crop', // Gris claro abstracto
-      fallbackColors: [const Color(0xFF9E9E9E), const Color(0xFFE0E0E0)],
-      textColor: Colors.black87,
-    ),
-    BankData(
-      name: 'Otra / Genérica',
-      logoUrl: 'https://cdn-icons-png.flaticon.com/512/628/628522.png',
-      cardImageUrl: 'https://images.unsplash.com/photo-1618501258602-5e197c36a617?q=80&w=600&auto=format&fit=crop', // Dorado abstracto
-      fallbackColors: [const Color(0xFF1A1A2E), const Color(0xFF0F0F1A)],
-    ),
+    // CMR / Banco Falabella
+    const BankData(name: 'CMR Básica', logoUrl: _cmrLogo, primaryColor: Color(0xFF00A859), secondaryColor: Color(0xFFFFFFFF), accentColor: Color(0xFF333333), network: 'VISA'),
+    const BankData(name: 'CMR Clásica', logoUrl: _cmrLogo, primaryColor: Color(0xFF008C45), secondaryColor: Color(0xFFFFFFFF), accentColor: Color(0xFF333333), network: 'VISA'),
+    const BankData(name: 'CMR Platinum', logoUrl: _cmrLogo, primaryColor: Color(0xFF063B2A), secondaryColor: Color(0xFF00A859), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
+    const BankData(name: 'CMR Signature', logoUrl: _cmrLogo, primaryColor: Color(0xFF111C18), secondaryColor: Color(0xFFA8D5C2), accentColor: Color(0xFFFFFFFF), network: 'VISA'),
   ];
 
   /// Obtiene la información visual de un banco por su nombre.

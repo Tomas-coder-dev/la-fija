@@ -19,6 +19,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final _service = SupabaseService();
   late Future<List<_CardWithExpenses>> _dataFuture;
+  
+  int _currentIndex = 0; // 0: Tarjetas, 1: Gastos, 2: Membresía
 
   @override
   void initState() {
@@ -42,21 +44,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return result;
   }
 
+  // ======= MODALS (Agregar Gasto / Tarjeta) =======
   Future<void> _showAddExpenseModal() async {
     final formKey = GlobalKey<FormState>();
     CreditCard? selectedCard;
     final montoController = TextEditingController();
 
     List<CreditCard> cards = [];
-    try {
-      cards = await _service.getCards();
-    } catch (_) {}
+    try { cards = await _service.getCards(); } catch (_) {}
 
     if (!mounted) return;
     if (cards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No tienes tarjetas registradas.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No tienes tarjetas registradas.')));
       return;
     }
 
@@ -64,17 +63,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF1A1A2E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
+                left: 24, right: 24, top: 24,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
               ),
               child: Form(
@@ -83,25 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Registrar Gasto',
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
+                    Text('Registrar Gasto', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
                     const SizedBox(height: 24),
                     DropdownButtonFormField<CreditCard>(
                       decoration: _inputDecoration('Tarjeta'),
@@ -109,12 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: GoogleFonts.inter(color: Colors.white),
                       value: selectedCard,
                       hint: Text('Selecciona una tarjeta', style: GoogleFonts.inter(color: Colors.white54)),
-                      items: cards.map((c) {
-                        return DropdownMenuItem(
-                          value: c,
-                          child: Text('${c.banco} · ${c.nombreTarjeta}', style: GoogleFonts.inter(color: Colors.white)),
-                        );
-                      }).toList(),
+                      items: cards.map((c) => DropdownMenuItem(value: c, child: Text('${c.banco} · ${c.nombreTarjeta}', style: GoogleFonts.inter(color: Colors.white)))).toList(),
                       onChanged: (val) => setModalState(() => selectedCard = val),
                       validator: (val) => val == null ? 'Selecciona una tarjeta' : null,
                     ),
@@ -123,38 +95,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       controller: montoController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       style: GoogleFonts.inter(color: Colors.white),
-                      decoration: _inputDecoration('Monto (S/)').copyWith(
-                        prefixText: 'S/ ',
-                        prefixStyle: GoogleFonts.inter(color: Colors.white70),
-                      ),
+                      decoration: _inputDecoration('Monto (S/)').copyWith(prefixText: 'S/ ', prefixStyle: GoogleFonts.inter(color: Colors.white70)),
                       validator: (val) {
                         if (val == null || val.isEmpty) return 'Ingresa un monto';
                         if (double.tryParse(val) == null) return 'Monto inválido';
-                        if (double.parse(val) <= 0) return 'El monto debe ser mayor a 0';
                         return null;
                       },
                     ),
                     const SizedBox(height: 28),
                     SizedBox(
-                      width: double.infinity,
-                      height: 54,
+                      width: double.infinity, height: 54,
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo.shade600,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo.shade600, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                         onPressed: () async {
                           if (!formKey.currentState!.validate()) return;
-                          final monto = double.parse(montoController.text);
                           try {
-                            await _service.addExpense(tarjetaId: selectedCard!.id, monto: monto);
+                            await _service.addExpense(tarjetaId: selectedCard!.id, monto: double.parse(montoController.text));
                             if (ctx.mounted) Navigator.of(ctx).pop();
                             _refresh();
                           } catch (e) {
-                            if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
-                            }
+                            if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
                           }
                         },
                         child: Text('Registrar', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -174,6 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final formKey = GlobalKey<FormState>();
     BankData? selectedBank;
     final nombreController = TextEditingController();
+    final limiteController = TextEditingController();
     final cierreController = TextEditingController();
     final pagoController = TextEditingController();
     final metaController = TextEditingController();
@@ -182,17 +143,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF1A1A2E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
+                left: 24, right: 24, top: 24,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
               ),
               child: Form(
@@ -202,29 +159,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Center(
-                        child: Container(
-                          width: 44,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
+                      Text('Nueva Tarjeta', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
                       const SizedBox(height: 24),
-                      Text(
-                        'Nueva Tarjeta',
-                        style: GoogleFonts.inter(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Selector visual de bancos
-                      Text('Banco', style: GoogleFonts.inter(color: Colors.white54, fontSize: 13)),
+                      Text('Diseño de Tarjeta', style: GoogleFonts.inter(color: Colors.white54, fontSize: 13)),
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 60,
@@ -242,99 +179,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 decoration: BoxDecoration(
                                   color: isSelected ? Colors.indigo.shade600 : const Color(0xFF252540),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isSelected ? Colors.indigo.shade400 : Colors.transparent,
-                                    width: 2,
-                                  ),
+                                  border: Border.all(color: isSelected ? Colors.indigo.shade400 : Colors.transparent, width: 2),
                                 ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
-                                      child: Image.network(bank.logoUrl, errorBuilder: (_,__,___) => const Icon(Icons.account_balance, size: 16, color: Colors.grey)),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(bank.name, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
+                                child: Center(child: Text(bank.name, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w500))),
                               ),
                             );
                           },
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      TextFormField(
-                        controller: nombreController,
-                        style: GoogleFonts.inter(color: Colors.white),
-                        decoration: _inputDecoration('Nombre (ej. BCP Clásica)'),
-                        validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
-                      ),
+                      TextFormField(controller: nombreController, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Nombre (Ej: Visa, CMR)'), validator: (val) => val!.isEmpty ? 'Requerido' : null),
                       const SizedBox(height: 16),
-
+                      TextFormField(controller: limiteController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Límite de Crédito (S/)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: cierreController,
-                              keyboardType: TextInputType.number,
-                              style: GoogleFonts.inter(color: Colors.white),
-                              decoration: _inputDecoration('Día Cierre (1-31)'),
-                              validator: (val) {
-                                final n = int.tryParse(val ?? '');
-                                if (n == null || n < 1 || n > 31) return 'Día inválido';
-                                return null;
-                              },
-                            ),
-                          ),
+                          Expanded(child: TextFormField(controller: cierreController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Día Cierre'), validator: (val) => int.tryParse(val!) == null ? 'Inválido' : null)),
                           const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: pagoController,
-                              keyboardType: TextInputType.number,
-                              style: GoogleFonts.inter(color: Colors.white),
-                              decoration: _inputDecoration('Día Pago (1-31)'),
-                              validator: (val) {
-                                final n = int.tryParse(val ?? '');
-                                if (n == null || n < 1 || n > 31) return 'Día inválido';
-                                return null;
-                              },
-                            ),
-                          ),
+                          Expanded(child: TextFormField(controller: pagoController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Día Pago'), validator: (val) => int.tryParse(val!) == null ? 'Inválido' : null)),
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      TextFormField(
-                        controller: metaController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        style: GoogleFonts.inter(color: Colors.white),
-                        decoration: _inputDecoration('Meta Mensual (S/)'),
-                        validator: (val) {
-                          if (double.tryParse(val ?? '') == null) return 'Monto inválido';
-                          return null;
-                        },
-                      ),
+                      TextFormField(controller: metaController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Meta para no pagar membresía (S/)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
                       const SizedBox(height: 28),
-
                       SizedBox(
-                        width: double.infinity,
-                        height: 54,
+                        width: double.infinity, height: 54,
                         child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo.shade600,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo.shade600, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                           onPressed: () async {
-                            if (selectedBank == null) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Selecciona un banco')));
-                              return;
-                            }
+                            if (selectedBank == null) { ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Selecciona un diseño'))); return; }
                             if (!formKey.currentState!.validate()) return;
-                            
                             try {
                               await _service.addCard(
                                 banco: selectedBank!.name,
@@ -342,13 +216,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 diaCierre: int.parse(cierreController.text),
                                 diaPago: int.parse(pagoController.text),
                                 metaMensual: double.parse(metaController.text),
+                                limiteCredito: double.parse(limiteController.text),
                               );
                               if (ctx.mounted) Navigator.of(ctx).pop();
                               _refresh();
                             } catch (e) {
-                              if (ctx.mounted) {
-                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
-                              }
+                              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
                             }
                           },
                           child: Text('Crear Tarjeta', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -371,37 +244,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(24),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFF1A1A2E), borderRadius: BorderRadius.circular(24)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(Icons.add_shopping_cart, color: Colors.green),
-              ),
+              leading: const Icon(Icons.add_shopping_cart, color: Colors.green),
               title: Text('Registrar Gasto', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showAddExpenseModal();
-              },
+              onTap: () { Navigator.pop(ctx); _showAddExpenseModal(); },
             ),
             const Divider(color: Colors.white10, height: 1),
             ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), shape: BoxShape.circle),
-                child: const Icon(Icons.credit_card, color: Colors.indigoAccent),
-              ),
+              leading: const Icon(Icons.credit_card, color: Colors.indigoAccent),
               title: Text('Nueva Tarjeta', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showAddCardModal();
-              },
+              onTap: () { Navigator.pop(ctx); _showAddCardModal(); },
             ),
           ],
         ),
@@ -413,19 +269,133 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return InputDecoration(
       labelText: label,
       labelStyle: GoogleFonts.inter(color: Colors.white54),
-      filled: true,
-      fillColor: const Color(0xFF252540),
+      filled: true, fillColor: const Color(0xFF252540),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.indigo.shade400, width: 1.5)),
-      errorStyle: GoogleFonts.inter(color: Colors.red.shade300),
+    );
+  }
+
+  // ======= TABS =======
+
+  Widget _buildTarjetasTab(List<_CardWithExpenses> data, NumberFormat currencyFormat) {
+    if (data.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.credit_card_off, size: 64, color: Colors.white24),
+            const SizedBox(height: 16),
+            Text('Aún no tienes tarjetas.', style: GoogleFonts.inter(color: Colors.white38)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _showAddCardModal, child: const Text('Añadir Primera Tarjeta')),
+          ],
+        ),
+      );
+    }
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth > 768) {
+          return GridView.builder(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 450, mainAxisSpacing: 20, crossAxisSpacing: 20, childAspectRatio: 1.2),
+            itemCount: data.length,
+            itemBuilder: (ctx, i) => CardProgressWidget(card: data[i].card, consumption: _service.getCurrentCycleConsumption(data[i].card, data[i].expenses), currencyFormat: currencyFormat),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: data.length,
+          itemBuilder: (ctx, i) => Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: CardProgressWidget(card: data[i].card, consumption: _service.getCurrentCycleConsumption(data[i].card, data[i].expenses), currencyFormat: currencyFormat),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGastosTab(List<_CardWithExpenses> data, NumberFormat currencyFormat) {
+    // Aplanar todos los gastos
+    final allExpenses = <Expense>[];
+    for (var item in data) { allExpenses.addAll(item.expenses); }
+    allExpenses.sort((a, b) => b.fechaConsumo.compareTo(a.fechaConsumo)); // Más recientes primero
+
+    if (allExpenses.isEmpty) {
+      return Center(child: Text('No tienes gastos registrados aún.', style: GoogleFonts.inter(color: Colors.white38)));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: allExpenses.length,
+      itemBuilder: (ctx, i) {
+        final exp = allExpenses[i];
+        final card = data.firstWhere((c) => c.card.id == exp.tarjetaId).card;
+        return ListTile(
+          leading: const CircleAvatar(backgroundColor: Color(0xFF252540), child: Icon(Icons.shopping_bag, color: Colors.white70)),
+          title: Text(currencyFormat.format(exp.monto), style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+          subtitle: Text('${card.banco} ${card.nombreTarjeta} • ${DateFormat('dd MMM yyyy').format(exp.fechaConsumo)}', style: GoogleFonts.inter(color: Colors.white54)),
+        );
+      },
+    );
+  }
+
+  Widget _buildMembresiaTab(List<_CardWithExpenses> data, NumberFormat currencyFormat) {
+    if (data.isEmpty) return const Center(child: Text('Sin tarjetas.'));
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: data.length,
+      itemBuilder: (ctx, i) {
+        final item = data[i];
+        final consumption = _service.getCurrentCycleConsumption(item.card, item.expenses);
+        final progress = (consumption / item.card.metaMensual).clamp(0.0, 1.0);
+        
+        Color progressColor = Colors.greenAccent;
+        if (progress > 0.9) progressColor = Colors.blueAccent;
+        else if (progress > 0.5) progressColor = Colors.orangeAccent;
+        else progressColor = Colors.redAccent;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: const Color(0xFF252540), borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${item.card.banco} ${item.card.nombreTarjeta}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Progreso Membresía', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+                  Text('${currencyFormat.format(consumption)} / ${currencyFormat.format(item.card.metaMensual)}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: Colors.white10,
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (progress >= 1.0)
+                Text('¡Meta cumplida este mes! 🎉', style: GoogleFonts.inter(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold))
+              else
+                Text('Falta ${currencyFormat.format(item.card.metaMensual - consumption)} para llegar a la meta.', style: GoogleFonts.inter(color: Colors.orangeAccent, fontSize: 12)),
+            ],
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
-    final displayName = user?.userMetadata?['full_name'] as String? ?? user?.email ?? 'Usuario';
-    final firstName = displayName.split(' ').first;
     final currencyFormat = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
 
     return Scaffold(
@@ -433,160 +403,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D0D1A),
         elevation: 0,
-        title: Text(
-          'La Fija',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 22, color: Colors.white, letterSpacing: -0.5),
-        ),
+        title: Text('La Fija', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 22, color: Colors.white, letterSpacing: -0.5)),
         actions: [
-          PopupMenuButton<String>(
-            icon: CircleAvatar(
-              backgroundColor: Colors.indigo.shade700,
-              child: Text(firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700)),
-            ),
-            color: const Color(0xFF1A1A2E),
-            onSelected: (val) async {
-              if (val == 'logout') await Supabase.instance.client.auth.signOut();
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    const Icon(Icons.logout, color: Colors.white70, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Cerrar sesión', style: GoogleFonts.inter(color: Colors.white70)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white54),
+            onPressed: () async => await Supabase.instance.client.auth.signOut(),
+          )
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _showActionMenu,
         backgroundColor: Colors.indigo.shade600,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: Text('Añadir', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        child: const Icon(Icons.add),
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Hola, $firstName 👋', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
-                  const SizedBox(height: 4),
-                  Text('Aquí va el progreso de tus tarjetas este ciclo.', style: GoogleFonts.inter(fontSize: 14, color: Colors.white54)),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: FutureBuilder<List<_CardWithExpenses>>(
-              future: _dataFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(padding: EdgeInsets.symmetric(vertical: 80), child: Center(child: CircularProgressIndicator(color: Colors.indigo)));
-                }
-
-                if (snapshot.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.error_outline, color: Colors.red.shade400, size: 48),
-                          const SizedBox(height: 12),
-                          Text('Error al cargar los datos.\n${snapshot.error}', textAlign: TextAlign.center, style: GoogleFonts.inter(color: Colors.white54)),
-                          const SizedBox(height: 16),
-                          TextButton.icon(onPressed: _refresh, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final data = snapshot.data ?? [];
-
-                if (data.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 32),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          const Icon(Icons.credit_card_off_rounded, size: 64, color: Colors.white24),
-                          const SizedBox(height: 16),
-                          Text('Aún no tienes tarjetas.', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 16, color: Colors.white38)),
-                          const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: _showAddCardModal,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Crear Tarjeta'),
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo.shade600, foregroundColor: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                // Diseño Responsivo usando LayoutBuilder
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    // Si el ancho es mayor a 768px (Tablet/PC), usamos Grid
-                    if (constraints.maxWidth > 768) {
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 450,
-                          mainAxisSpacing: 20,
-                          crossAxisSpacing: 20,
-                          childAspectRatio: 1.5, // Proporción de tarjeta
-                        ),
-                        itemCount: data.length,
-                        itemBuilder: (ctx, i) {
-                          final item = data[i];
-                          return CardProgressWidget(
-                            card: item.card,
-                            consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
-                            currencyFormat: currencyFormat,
-                          );
-                        },
-                      );
-                    }
-
-                    // En móviles, usamos Lista Vertical
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: data.length,
-                      itemBuilder: (ctx, i) {
-                        final item = data[i];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: CardProgressWidget(
-                            card: item.card,
-                            consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
-                            currencyFormat: currencyFormat,
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF1A1A2E),
+        selectedItemColor: Colors.indigoAccent,
+        unselectedItemColor: Colors.white38,
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'Tarjetas'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Gastos'),
+          BottomNavigationBarItem(icon: Icon(Icons.stars), label: 'Membresía'),
         ],
+      ),
+      body: FutureBuilder<List<_CardWithExpenses>>(
+        future: _dataFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white)));
+          
+          final data = snapshot.data ?? [];
+          
+          if (_currentIndex == 0) return _buildTarjetasTab(data, currencyFormat);
+          if (_currentIndex == 1) return _buildGastosTab(data, currencyFormat);
+          if (_currentIndex == 2) return _buildMembresiaTab(data, currencyFormat);
+          
+          return const SizedBox.shrink();
+        },
       ),
     );
   }

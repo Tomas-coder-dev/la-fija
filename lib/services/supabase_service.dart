@@ -27,17 +27,19 @@ class SupabaseService {
     required int diaCierre,
     required int diaPago,
     required double metaMensual,
+    required double limiteCredito,
   }) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) throw Exception('Usuario no autenticado');
+    final user = _client.auth.currentUser;
+    if (user == null) throw Exception('Usuario no autenticado');
 
     await _client.from('tarjetas').insert({
-      'user_id': userId,
+      'user_id': user.id,
       'banco': banco,
       'nombre_tarjeta': nombreTarjeta,
       'dia_cierre': diaCierre,
       'dia_pago': diaPago,
       'meta_mensual': metaMensual,
+      'limite_credito': limiteCredito,
     });
   }
 

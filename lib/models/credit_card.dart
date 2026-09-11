@@ -6,6 +6,7 @@ class CreditCard {
   final int diaCierre;
   final int diaPago;
   final double metaMensual;
+  final double limiteCredito;
 
   const CreditCard({
     required this.id,
@@ -14,6 +15,7 @@ class CreditCard {
     required this.diaCierre,
     required this.diaPago,
     required this.metaMensual,
+    required this.limiteCredito,
   });
 
   factory CreditCard.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,7 @@ class CreditCard {
       diaCierre: json['dia_cierre'] as int,
       diaPago: json['dia_pago'] as int,
       metaMensual: (json['meta_mensual'] as num).toDouble(),
+      limiteCredito: (json['limite_credito'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
