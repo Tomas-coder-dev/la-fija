@@ -968,6 +968,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
+  }
+
   Future<void> _showEditCardModal(CreditCard cardToEdit) async {
     final formKey = GlobalKey<FormState>();
     BankData selectedBank = BankCatalog.getBankData(cardToEdit.banco);
@@ -1560,7 +1562,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
-                ...data.map((item) {
+                ...data.map((_CardWithExpenses item) {
                   final isSelected = _selectedFilterCard?.id == item.card.id;
                   final bankData = BankCatalog.getBankData(item.card.banco);
                   return GestureDetector(
@@ -1711,7 +1713,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Expense items with Dismissible
                   ...expenses.map((exp) {
                     final cardItem = data.firstWhere(
-                      (c) => c.card.id == exp.tarjetaId,
+                      (_CardWithExpenses c) => c.card.id == exp.tarjetaId,
                       orElse: () => data.first,
                     );
                     final card = cardItem.card;
@@ -1796,8 +1798,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
         ),
-      ],
-    );
+      ),
+    ],
+  );
   }
 
   Widget _buildMembresiaTab(List<_CardWithExpenses> data, NumberFormat currencyFormat) {
@@ -1935,42 +1938,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  void _showActionMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xFF141428),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.credit_card_rounded, color: Colors.indigoAccent),
-              title: Text('Añadir Tarjeta', style: GoogleFonts.inter(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(ctx);
-                // Si el método no existe, lo dejo comentado temporalmente
-                // _showAddCardModal();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.receipt_long_rounded, color: Colors.greenAccent),
-              title: Text('Añadir Gasto', style: GoogleFonts.inter(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(ctx);
-                // _showAddExpenseModal();
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 
