@@ -1520,28 +1520,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           )
         : const SizedBox.shrink();
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(Icons.receipt_long_rounded, size: 40, color: Colors.white24),
-            ),
-            const SizedBox(height: 20),
-            Text('Sin gastos registrados', style: GoogleFonts.inter(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Text('Tus consumos aparecerán aquí', style: GoogleFonts.inter(color: Colors.white24, fontSize: 13)),
-          ],
-        ),
-      );
-    }
-
     // Group by category
     final grouped = <String, List<Expense>>{};
     for (final exp in allExpenses) {
@@ -1957,6 +1935,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showActionMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Color(0xFF141428),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.credit_card_rounded, color: Colors.indigoAccent),
+              title: Text('Añadir Tarjeta', style: GoogleFonts.inter(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                // Si el método no existe, lo dejo comentado temporalmente
+                // _showAddCardModal();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_rounded, color: Colors.greenAccent),
+              title: Text('Añadir Gasto', style: GoogleFonts.inter(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                // _showAddExpenseModal();
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
