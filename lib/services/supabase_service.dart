@@ -68,11 +68,13 @@ class SupabaseService {
   Future<void> addExpense({
     required String tarjetaId,
     required double monto,
+    String categoria = 'otros',
   }) async {
     await _client.from('gastos').insert({
       'tarjeta_id': tarjetaId,
       'monto': monto,
       'fecha_consumo': DateTime.now().toUtc().toIso8601String(),
+      'categoria': categoria,
     });
   }
 
