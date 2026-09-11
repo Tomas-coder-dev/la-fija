@@ -36,25 +36,39 @@ class CardProgressWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: const Color(0xFF1A1A2E), // Color de fondo por defecto si la imagen no carga rápido
-        image: DecorationImage(
-          image: AssetImage(bankData.assetPath),
-          fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(
-            Colors.black.withOpacity(0.1), // Un pequeño filtro oscuro para que las letras resalten
-            BlendMode.darken,
-          ),
-        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: bankData.fallbackColors.first.withOpacity(0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Stack(
-        children: [
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            // Capa 1: El fondo de gradiente por defecto
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: bankData.fallbackColors,
+                ),
+              ),
+            ),
+            // Capa 2: La imagen de la tarjeta (si está disponible y carga bien)
+            if (bankData.cardImageUrl.isNotEmpty)
+              Positioned.fill(
+                child: Image.network(
+                  bankData.cardImageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  color: Colors.black.withOpacity(0.1), // Un pequeño filtro oscuro para que las letras resalten
+                  colorBlendMode: BlendMode.darken,
+                ),
+              ),
           // Patrón o brillo de fondo sutil
           Positioned(
             right: -50,
