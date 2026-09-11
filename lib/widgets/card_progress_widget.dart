@@ -281,16 +281,16 @@ class _CardProgressWidgetState extends State<CardProgressWidget> {
                       ),
                     ),
                   ),
-                  if (onDelete != null)
+                  if (widget.onDelete != null)
                     IconButton(
                       icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
                       tooltip: 'Eliminar tarjeta',
-                      onPressed: onDelete,
+                      onPressed: widget.onDelete,
                     ),
                 ],
               ),
               Text(
-                '•••• ${card.nombreTarjeta}',
+                '•••• ${widget.card.nombreTarjeta}',
                 style: GoogleFonts.inter(
                   color: Colors.white54,
                   fontSize: 14,
@@ -302,7 +302,7 @@ class _CardProgressWidgetState extends State<CardProgressWidget> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Límite:', style: GoogleFonts.inter(color: Colors.white54, fontSize: 14)),
-                  Text(currencyFormat.format(card.limiteCredito), style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(widget.currencyFormat.format(widget.card.limiteCredito), style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                 ],
               ),
               const SizedBox(height: 4),
@@ -310,7 +310,7 @@ class _CardProgressWidgetState extends State<CardProgressWidget> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Disponible:', style: GoogleFonts.inter(color: Colors.green.shade400, fontSize: 14, fontWeight: FontWeight.w600)),
-                  Text(currencyFormat.format(available > 0 ? available : 0), style: GoogleFonts.inter(color: Colors.green.shade400, fontSize: 14, fontWeight: FontWeight.w700)),
+                  Text(widget.currencyFormat.format(available > 0 ? available : 0), style: GoogleFonts.inter(color: Colors.green.shade400, fontSize: 14, fontWeight: FontWeight.w700)),
                 ],
               ),
             ],
