@@ -5,8 +5,11 @@ class CreditCard {
   final String nombreTarjeta;
   final int diaCierre;
   final int diaPago;
-  final double metaMensual;
+  final double metaMensual; // Legado
   final double limiteCredito;
+  final double membershipFee;
+  final String exemptionType;
+  final double exemptionTarget;
 
   const CreditCard({
     required this.id,
@@ -16,6 +19,9 @@ class CreditCard {
     required this.diaPago,
     required this.metaMensual,
     required this.limiteCredito,
+    this.membershipFee = 0.0,
+    this.exemptionType = 'monthly_average',
+    this.exemptionTarget = 0.0,
   });
 
   factory CreditCard.fromJson(Map<String, dynamic> json) {
@@ -27,6 +33,9 @@ class CreditCard {
       diaPago: json['dia_pago'] as int,
       metaMensual: (json['meta_mensual'] as num).toDouble(),
       limiteCredito: (json['limite_credito'] as num?)?.toDouble() ?? 0.0,
+      membershipFee: (json['membership_fee'] as num?)?.toDouble() ?? 0.0,
+      exemptionType: json['exemption_type'] as String? ?? 'monthly_average',
+      exemptionTarget: (json['exemption_target'] as num?)?.toDouble() ?? (json['meta_mensual'] as num).toDouble(),
     );
   }
 

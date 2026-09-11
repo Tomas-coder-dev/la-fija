@@ -26,8 +26,11 @@ class SupabaseService {
     required String nombreTarjeta,
     required int diaCierre,
     required int diaPago,
-    required double metaMensual,
+    required double metaMensual, // Legacy
     required double limiteCredito,
+    required double membershipFee,
+    required String exemptionType,
+    required double exemptionTarget,
   }) async {
     final user = _client.auth.currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
@@ -40,6 +43,9 @@ class SupabaseService {
       'dia_pago': diaPago,
       'meta_mensual': metaMensual,
       'limite_credito': limiteCredito,
+      'membership_fee': membershipFee,
+      'exemption_type': exemptionType,
+      'exemption_target': exemptionTarget,
     });
   }
 
@@ -112,5 +118,34 @@ class SupabaseService {
             !e.fechaConsumo.isBefore(cycleStart) &&
             !e.fechaConsumo.isAfter(cycleEnd))
         .fold(0.0, (sum, e) => sum + e.monto);
+  }
+
+  /// Calcula la cantidad de consumos (transacciones) dentro del ciclo de facturación ACTUAL.
+  int getCurrentCycleExpenseCount(
+    CreditCard card,
+    List<Expense> expenses,
+  ) {
+    final today = DateTime.now();
+    final diaCierre = card.diaCierre;
+
+    late DateTime cycleStart;
+    late DateTime cycleEnd;
+
+    if (today.day > diaCierre) {
+      cycleStart = DateTime(today.year, today.month, diaCierre + 1);
+      final nextMonth = DateTime(today.year, today.month + 1);
+      cycleEnd = DateTime(nextMonth.year, nextMonth.month, diaCierre, 23, 59, 59);
+    } else {
+      final prevMonth = DateTime(today.year, today.month - 1);
+      cycleStart = DateTime(prevMonth.year, prevMonth.month, diaCierre + 1);
+      cycleEnd = DateTime(today.year, today.month, diaCierre, 23, 59, 59);
+    }
+
+    return expenses
+        .where((e) =>
+            e.tarjetaId == card.id &&
+            !e.fechaConsumo.isBefore(cycleStart) &&
+            !e.fechaConsumo.isAfter(cycleEnd))
+        .length;
   }
 }

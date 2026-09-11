@@ -138,6 +138,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final cierreController = TextEditingController();
     final pagoController = TextEditingController();
     final metaController = TextEditingController();
+    final membresiaController = TextEditingController(text: '0');
+    String exemptionType = 'monthly_average';
 
     await showModalBottomSheet(
       context: context,
@@ -172,7 +174,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             final bank = BankCatalog.banks[index];
                             final isSelected = selectedBank == bank;
                             return GestureDetector(
-                              onTap: () => setModalState(() => selectedBank = bank),
+                              onTap: () {
+                                setModalState(() {
+                                  selectedBank = bank;
+                                  nombreController.text = bank.network;
+                                  metaController.text = bank.defaultExemptionTarget.toString();
+                                  membresiaController.text = bank.defaultMembershipFee.toString();
+                                  exemptionType = bank.defaultExemptionType;
+                                });
+                              },
                               child: Container(
                                 margin: const EdgeInsets.only(right: 12),
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -200,7 +210,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(controller: metaController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Meta para no pagar membresía (S/)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
+                      TextFormField(controller: membresiaController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Costo de Membresía (S/)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: _inputDecoration('Tipo de Meta'),
+                        dropdownColor: const Color(0xFF252540),
+                        style: GoogleFonts.inter(color: Colors.white),
+                        value: exemptionType,
+                        items: const [
+                          DropdownMenuItem(value: 'monthly_average', child: Text('Monto de consumo (S/)')),
+                          DropdownMenuItem(value: 'monthly_purchase', child: Text('Cantidad de consumos')),
+                        ],
+                        onChanged: (val) => setModalState(() => exemptionType = val!),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(controller: metaController, keyboardType: TextInputType.number, style: GoogleFonts.inter(color: Colors.white), decoration: _inputDecoration('Meta (Monto o Cantidad)'), validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null),
                       const SizedBox(height: 28),
                       SizedBox(
                         width: double.infinity, height: 54,
@@ -215,8 +239,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 nombreTarjeta: nombreController.text,
                                 diaCierre: int.parse(cierreController.text),
                                 diaPago: int.parse(pagoController.text),
-                                metaMensual: double.parse(metaController.text),
+                                metaMensual: double.parse(metaController.text), // Legacy
                                 limiteCredito: double.parse(limiteController.text),
+                                membershipFee: double.parse(membresiaController.text),
+                                exemptionType: exemptionType,
+                                exemptionTarget: double.parse(metaController.text),
                               );
                               if (ctx.mounted) Navigator.of(ctx).pop();
                               _refresh();
@@ -348,13 +375,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemCount: data.length,
       itemBuilder: (ctx, i) {
         final item = data[i];
-        final consumption = _service.getCurrentCycleConsumption(item.card, item.expenses);
-        final progress = (consumption / item.card.metaMensual).clamp(0.0, 1.0);
+        final isCountBased = item.card.exemptionType == 'monthly_purchase';
+        
+        final double currentProgressValue;
+        final double targetValue = item.card.exemptionTarget;
+        
+        if (isCountBased) {
+          currentProgressValue = _service.getCurrentCycleExpenseCount(item.card, item.expenses).toDouble();
+        } else {
+          currentProgressValue = _service.getCurrentCycleConsumption(item.card, item.expenses);
+        }
+
+        final progress = targetValue == 0 ? 1.0 : (currentProgressValue / targetValue).clamp(0.0, 1.0);
         
         Color progressColor = Colors.greenAccent;
         if (progress > 0.9) progressColor = Colors.blueAccent;
         else if (progress > 0.5) progressColor = Colors.orangeAccent;
         else progressColor = Colors.redAccent;
+
+        final targetDisplay = isCountBased ? '${targetValue.toInt()} consumo(s)' : currencyFormat.format(targetValue);
+        final currentDisplay = isCountBased ? '${currentProgressValue.toInt()} consumo(s)' : currencyFormat.format(currentProgressValue);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -363,13 +403,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${item.card.banco} ${item.card.nombreTarjeta}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('${item.card.banco} ${item.card.nombreTarjeta}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  if (item.card.membershipFee > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                      child: Text('Penalidad: ${currencyFormat.format(item.card.membershipFee)}', style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Progreso Membresía', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
-                  Text('${currencyFormat.format(consumption)} / ${currencyFormat.format(item.card.metaMensual)}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text('$currentDisplay / $targetDisplay', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -383,10 +434,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              if (progress >= 1.0)
+              if (targetValue == 0)
+                Text('Esta tarjeta no cobra membresía 🎉', style: GoogleFonts.inter(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold))
+              else if (progress >= 1.0)
                 Text('¡Meta cumplida este mes! 🎉', style: GoogleFonts.inter(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold))
               else
-                Text('Falta ${currencyFormat.format(item.card.metaMensual - consumption)} para llegar a la meta.', style: GoogleFonts.inter(color: Colors.orangeAccent, fontSize: 12)),
+                Text(
+                  isCountBased
+                      ? 'Faltan ${(targetValue - currentProgressValue).toInt()} consumo(s).'
+                      : 'Falta ${currencyFormat.format(targetValue - currentProgressValue)} para llegar a la meta.',
+                  style: GoogleFonts.inter(color: Colors.orangeAccent, fontSize: 12),
+                ),
             ],
           ),
         );
