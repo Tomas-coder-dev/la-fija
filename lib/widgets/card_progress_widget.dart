@@ -213,14 +213,17 @@ class CardProgressWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      bankData.name,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        bankData.name,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (onDelete != null)

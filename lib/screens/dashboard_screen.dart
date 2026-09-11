@@ -19,9 +19,14 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
+enum CardSortOption { urgency, limit, custom }
+
 class _DashboardScreenState extends State<DashboardScreen> {
   final _service = SupabaseService();
   late Future<List<_CardWithExpenses>> _dataFuture;
+  
+  CardSortOption _sortOption = CardSortOption.urgency;
+  List<_CardWithExpenses> _cachedData = [];
 
   int _currentIndex = 0; // 0: Tarjetas, 1: Gastos, 2: Membresía
   int _membresiaPage = 0;
@@ -52,7 +57,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final expenses = await _service.getExpensesByCard(card.id);
       result.add(_CardWithExpenses(card: card, expenses: expenses));
     }
-    return result;
+    _cachedData = result;
+    _applySorting();
+    return _cachedData;
+  }
+
+  void _applySorting() {
+    if (_sortOption == CardSortOption.urgency) {
+      _cachedData.sort((a, b) => _service.getDaysUntilCycleEnd(a.card).compareTo(_service.getDaysUntilCycleEnd(b.card)));
+    } else if (_sortOption == CardSortOption.limit) {
+      _cachedData.sort((a, b) => b.card.limiteCredito.compareTo(a.card.limiteCredito));
+    }
+    // custom mantiene el orden actual
   }
 
   String _getGreeting() {
@@ -576,7 +592,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   categoria: selectedCategory,
                                 );
                                 if (ctx.mounted) Navigator.of(ctx).pop();
+                                
+                                final cardIndex = _cachedData.indexWhere((c) => c.card.id == selectedCard!.id);
+                                
                                 _refresh();
+
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('¡Gasto registrado con éxito! 🎉'),
+                                      backgroundColor: Colors.green,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  setState(() {
+                                    _currentIndex = 2; // Ir a Membresía
+                                  });
+                                  if (cardIndex != -1) {
+                                    Future.delayed(const Duration(milliseconds: 300), () {
+                                      if (_membresiaPageController.hasClients) {
+                                        _membresiaPageController.jumpToPage(cardIndex);
+                                      }
+                                    });
+                                  }
+                                }
                               } catch (e) {
                                 if (ctx.mounted) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -867,6 +906,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 );
                                 if (ctx.mounted) Navigator.of(ctx).pop();
                                 _refresh();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('¡Tarjeta creada con éxito! 💳'),
+                                      backgroundColor: Colors.indigo,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
                               } catch (e) {
                                 if (ctx.mounted) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -997,50 +1045,132 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth > 768) {
-          return GridView.builder(
-            padding: const EdgeInsets.all(20),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 450,
-              mainAxisSpacing: 20,
-              crossAxisSpacing: 20,
-              childAspectRatio: 1.15,
-            ),
-            itemCount: data.length,
-            itemBuilder: (ctx, i) {
-              final item = data[i];
-              return CardProgressWidget(
-                card: item.card,
-                consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
-                currencyFormat: currencyFormat,
-                daysRemaining: _service.getDaysUntilCycleEnd(item.card),
-                onTap: () => _showCardDetailModal(item),
-                onDelete: () => _showDeleteCardConfirmation(item.card),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Mis Tarjetas (${data.length})',
+                style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              PopupMenuButton<CardSortOption>(
+                icon: const Icon(Icons.sort_rounded, color: Colors.white70),
+                color: const Color(0xFF1E1E38),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                initialValue: _sortOption,
+                onSelected: (val) {
+                  setState(() {
+                    _sortOption = val;
+                    _applySorting();
+                  });
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: CardSortOption.urgency,
+                    child: Text('Más urgente (Cierre)', style: GoogleFonts.inter(color: Colors.white)),
+                  ),
+                  PopupMenuItem(
+                    value: CardSortOption.limit,
+                    child: Text('Mayor límite', style: GoogleFonts.inter(color: Colors.white)),
+                  ),
+                  PopupMenuItem(
+                    value: CardSortOption.custom,
+                    child: Text('Personalizado (Arrastrar)', style: GoogleFonts.inter(color: Colors.white)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 768 && _sortOption != CardSortOption.custom) {
+                return GridView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 450,
+                    mainAxisSpacing: 20,
+                    crossAxisSpacing: 20,
+                    childAspectRatio: 1.15,
+                  ),
+                  itemCount: data.length,
+                  itemBuilder: (ctx, i) {
+                    final item = data[i];
+                    return CardProgressWidget(
+                      card: item.card,
+                      consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
+                      currencyFormat: currencyFormat,
+                      daysRemaining: _service.getDaysUntilCycleEnd(item.card),
+                      onTap: () => _showCardDetailModal(item),
+                      onDelete: () => _showDeleteCardConfirmation(item.card),
+                    );
+                  },
+                );
+              }
+              
+              if (_sortOption == CardSortOption.custom) {
+                return ReorderableListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  proxyDecorator: (child, index, animation) {
+                    return Material(
+                      color: Colors.transparent,
+                      elevation: 8,
+                      shadowColor: Colors.black45,
+                      child: child,
+                    );
+                  },
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final item = _cachedData.removeAt(oldIndex);
+                      _cachedData.insert(newIndex, item);
+                    });
+                  },
+                  itemCount: data.length,
+                  itemBuilder: (ctx, i) {
+                    final item = data[i];
+                    return Padding(
+                      key: ValueKey(item.card.id),
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: CardProgressWidget(
+                        card: item.card,
+                        consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
+                        currencyFormat: currencyFormat,
+                        daysRemaining: _service.getDaysUntilCycleEnd(item.card),
+                        onTap: () => _showCardDetailModal(item),
+                        onDelete: () => _showDeleteCardConfirmation(item.card),
+                      ),
+                    );
+                  },
+                );
+              }
+              
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: data.length,
+                itemBuilder: (ctx, i) {
+                  final item = data[i];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: CardProgressWidget(
+                      card: item.card,
+                      consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
+                      currencyFormat: currencyFormat,
+                      daysRemaining: _service.getDaysUntilCycleEnd(item.card),
+                      onTap: () => _showCardDetailModal(item),
+                      onDelete: () => _showDeleteCardConfirmation(item.card),
+                    ),
+                  );
+                },
               );
             },
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: data.length,
-          itemBuilder: (ctx, i) {
-            final item = data[i];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: CardProgressWidget(
-                card: item.card,
-                consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
-                currencyFormat: currencyFormat,
-                daysRemaining: _service.getDaysUntilCycleEnd(item.card),
-                onTap: () => _showCardDetailModal(item),
-                onDelete: () => _showDeleteCardConfirmation(item.card),
-              ),
-            );
-          },
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 
