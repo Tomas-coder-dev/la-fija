@@ -27,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   
   CardSortOption _sortOption = CardSortOption.urgency;
   List<_CardWithExpenses> _cachedData = [];
+  CreditCard? _selectedFilterCard;
 
   int _currentIndex = 0; // 0: Tarjetas, 1: Gastos, 2: Membresía
   int _membresiaPage = 0;
@@ -105,254 +106,287 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final totalCycleSpent = _service.getCurrentCycleConsumption(item.card, item.expenses);
     final daysRemaining = _service.getDaysUntilCycleEnd(item.card);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            return Container(
-              margin: const EdgeInsets.only(top: 50),
-              decoration: const BoxDecoration(
-                color: Color(0xFF141428),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Handle Bar & Header
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withOpacity(0.7),
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (ctx, animation, secondaryAnimation) {
+          return Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: StatefulBuilder(
+                builder: (ctx, setModalState) {
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 1),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+                    child: Container(
+                      height: MediaQuery.of(ctx).size.height * 0.85,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF141428),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Card Mini Visual Header
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [bankData.primaryColor, bankData.secondaryColor],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: bankData.primaryColor.withOpacity(0.3),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.credit_card_rounded, color: Colors.white, size: 28),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${item.card.banco} · ${item.card.nombreTarjeta}',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Handle Bar & Header
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
-                                Text(
-                                  'Límite: ${currencyFmt.format(item.card.limiteCredito)} · Cierra día ${item.card.diaCierre}',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70),
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _showDeleteCardConfirmation(item.card);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Quick Stats Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E38),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Gastado en ciclo', style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
-                                const SizedBox(height: 4),
-                                Text(currencyFmt.format(totalCycleSpent), style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E38),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Días de ciclo', style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
-                                const SizedBox(height: 4),
-                                Text('$daysRemaining días restantes', style: GoogleFonts.inter(color: Colors.amberAccent, fontSize: 14, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Section Title
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Gastos del ciclo actual (${cycleExpenses.length})',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          'Desliza para borrar',
-                          style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Expenses List
-                    Flexible(
-                      child: cycleExpenses.isEmpty
-                          ? Container(
-                              padding: const EdgeInsets.all(24),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'No hay gastos registrados en este ciclo.',
-                                style: GoogleFonts.inter(color: Colors.white38, fontSize: 13),
                               ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: cycleExpenses.length,
-                              itemBuilder: (ctx, idx) {
-                                final exp = cycleExpenses[idx];
-                                final catData = ExpenseCategory.fromKey(exp.categoria);
+                            ),
+                            const SizedBox(height: 16),
 
-                                return Dismissible(
-                                  key: Key(exp.id),
-                                  direction: DismissDirection.endToStart,
-                                  background: Container(
-                                    alignment: Alignment.centerRight,
-                                    padding: const EdgeInsets.only(right: 20),
-                                    decoration: BoxDecoration(
-                                      color: Colors.redAccent.withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(12),
+                            // Card Mini Visual Header (Wrapped in Hero)
+                            Hero(
+                              tag: 'card_hero_${item.card.id}',
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [bankData.primaryColor, bankData.secondaryColor],
                                     ),
-                                    child: const Icon(Icons.delete_rounded, color: Colors.white),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: bankData.primaryColor.withOpacity(0.3),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
                                   ),
-                                  onDismissed: (_) async {
-                                    await _service.deleteExpense(exp.id);
-                                    setModalState(() {
-                                      cycleExpenses.removeAt(idx);
-                                    });
-                                    _refresh();
-                                  },
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.credit_card_rounded, color: Colors.white, size: 28),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${item.card.banco} · ${item.card.nombreTarjeta}',
+                                              style: GoogleFonts.inter(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Límite: ${currencyFmt.format(item.card.limiteCredito)} · Cierra día ${item.card.diaCierre}',
+                                              style: GoogleFonts.inter(
+                                                color: Colors.white70,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.edit_rounded, color: Colors.white70),
+                                            onPressed: () {
+                                              Navigator.pop(ctx);
+                                              _showEditCardModal(item.card);
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70),
+                                            onPressed: () {
+                                              Navigator.pop(ctx);
+                                              _showDeleteCardConfirmation(item.card);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // Quick Stats Row
+                            Row(
+                              children: [
+                                Expanded(
                                   child: Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF1E1E38),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: Row(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            color: catData.color.withOpacity(0.15),
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Center(
-                                            child: Text(catData.emoji, style: const TextStyle(fontSize: 16)),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                catData.label,
-                                                style: GoogleFonts.inter(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                              Text(
-                                                _formatRelativeDate(exp.fechaConsumo),
-                                                style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          currencyFmt.format(exp.monto),
-                                          style: GoogleFonts.inter(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14,
-                                          ),
-                                        ),
+                                        Text('Gastado en ciclo', style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+                                        const SizedBox(height: 4),
+                                        Text(currencyFmt.format(totalCycleSpent), style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
                                       ],
                                     ),
                                   ),
-                                );
-                              },
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1E1E38),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Días de ciclo', style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+                                        const SizedBox(height: 4),
+                                        Text('$daysRemaining días restantes', style: GoogleFonts.inter(color: Colors.amberAccent, fontSize: 14, fontWeight: FontWeight.w700)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+
+                            const SizedBox(height: 20),
+
+                            // Section Title
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Gastos del ciclo actual (${cycleExpenses.length})',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  'Desliza para borrar',
+                                  style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Expenses List
+                            Flexible(
+                              child: cycleExpenses.isEmpty
+                                  ? Container(
+                                      padding: const EdgeInsets.all(24),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        'No hay gastos registrados en este ciclo.',
+                                        style: GoogleFonts.inter(color: Colors.white38, fontSize: 13),
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      shrinkWrap: true,
+                                      itemCount: cycleExpenses.length,
+                                      itemBuilder: (ctx, idx) {
+                                        final exp = cycleExpenses[idx];
+                                        final catData = ExpenseCategory.fromKey(exp.categoria);
+
+                                        return Dismissible(
+                                          key: Key(exp.id),
+                                          direction: DismissDirection.endToStart,
+                                          background: Container(
+                                            alignment: Alignment.centerRight,
+                                            padding: const EdgeInsets.only(right: 20),
+                                            decoration: BoxDecoration(
+                                              color: Colors.redAccent.withOpacity(0.8),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Icon(Icons.delete_rounded, color: Colors.white),
+                                          ),
+                                          onDismissed: (_) async {
+                                            await _service.deleteExpense(exp.id);
+                                            setModalState(() {
+                                              cycleExpenses.removeAt(idx);
+                                            });
+                                            _refresh();
+                                          },
+                                          child: Container(
+                                            margin: const EdgeInsets.only(bottom: 8),
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF1E1E38),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 36,
+                                                  height: 36,
+                                                  decoration: BoxDecoration(
+                                                    color: catData.color.withOpacity(0.15),
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(catData.emoji, style: const TextStyle(fontSize: 16)),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        catData.label,
+                                                        style: GoogleFonts.inter(
+                                                          color: Colors.white,
+                                                          fontWeight: FontWeight.w600,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        _formatRelativeDate(exp.fechaConsumo),
+                                                        style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Text(
+                                                  currencyFmt.format(exp.monto),
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -934,6 +968,262 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
+  Future<void> _showEditCardModal(CreditCard cardToEdit) async {
+    final formKey = GlobalKey<FormState>();
+    BankData selectedBank = BankCatalog.getBankData(cardToEdit.banco);
+    final nombreController = TextEditingController(text: cardToEdit.nombreTarjeta);
+    final limiteController = TextEditingController(text: cardToEdit.limiteCredito.toString());
+    final cierreController = TextEditingController(text: cardToEdit.diaCierre.toString());
+    final pagoController = TextEditingController(text: cardToEdit.diaPago.toString());
+    final metaController = TextEditingController(text: cardToEdit.exemptionTarget.toString());
+    final membresiaController = TextEditingController(text: cardToEdit.membershipFee.toString());
+    String exemptionType = cardToEdit.exemptionType;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Container(
+              margin: const EdgeInsets.only(top: 50),
+              decoration: const BoxDecoration(
+                color: Color(0xFF141428),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 28,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 32,
+                ),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Editar Tarjeta', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+                        const SizedBox(height: 6),
+                        Text('Modifica los detalles de tu tarjeta', style: GoogleFonts.inter(fontSize: 14, color: Colors.white38)),
+                        const SizedBox(height: 20),
+
+                        // Card Preview Banner
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [selectedBank.primaryColor, selectedBank.secondaryColor]),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [BoxShadow(color: selectedBank.primaryColor.withOpacity(0.4), blurRadius: 12)],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(selectedBank.name, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    selectedBank.isStrictMonthly ? '⚡ Consumo vital cada mes' : '✨ Meta flexible anual',
+                                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(10)),
+                                child: Text(
+                                  'S/ ${membresiaController.text}/año',
+                                  style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Selector de Banco
+                        Text('Banco', style: GoogleFonts.inter(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 64,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: BankCatalog.banks.length,
+                            itemBuilder: (context, index) {
+                              final bank = BankCatalog.banks[index];
+                              final isSelected = selectedBank == bank;
+                              return GestureDetector(
+                                onTap: () {
+                                  setModalState(() {
+                                    selectedBank = bank;
+                                    // if changing bank, we don't clear the names, just update theme.
+                                  });
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  margin: const EdgeInsets.only(right: 10),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    gradient: isSelected ? LinearGradient(colors: [bank.primaryColor, bank.secondaryColor]) : null,
+                                    color: isSelected ? null : const Color(0xFF1E1E38),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: isSelected ? Colors.white : Colors.transparent, width: 1.5),
+                                    boxShadow: isSelected ? [BoxShadow(color: bank.primaryColor.withOpacity(0.4), blurRadius: 10)] : null,
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(bank.name, style: GoogleFonts.inter(color: Colors.white, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: nombreController,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Nombre / Tipo (Ej: Visa Signature, Bfree)'),
+                          validator: (val) => val!.isEmpty ? 'Requerido' : null,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: limiteController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Límite de Crédito (S/)'),
+                          validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null,
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: cierreController,
+                                keyboardType: TextInputType.number,
+                                style: GoogleFonts.inter(color: Colors.white),
+                                decoration: _inputDecoration('Día de Cierre (1-31)'),
+                                validator: (val) {
+                                  final num = int.tryParse(val!);
+                                  if (num == null || num < 1 || num > 31) return 'Día 1-31';
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: pagoController,
+                                keyboardType: TextInputType.number,
+                                style: GoogleFonts.inter(color: Colors.white),
+                                decoration: _inputDecoration('Día de Pago (1-31)'),
+                                validator: (val) {
+                                  final num = int.tryParse(val!);
+                                  if (num == null || num < 1 || num > 31) return 'Día 1-31';
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: membresiaController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Costo de Membresía Anual (S/)'),
+                          onChanged: (val) => setModalState(() {}),
+                          validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null,
+                        ),
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          decoration: _inputDecoration('Requisito de Exoneración'),
+                          dropdownColor: const Color(0xFF252540),
+                          style: GoogleFonts.inter(color: Colors.white),
+                          value: exemptionType,
+                          items: const [
+                            DropdownMenuItem(value: 'monthly_average', child: Text('Monto de consumo (S/)')),
+                            DropdownMenuItem(value: 'monthly_purchase', child: Text('Cantidad de compras (unidades)')),
+                          ],
+                          onChanged: (val) => setModalState(() => exemptionType = val!),
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: metaController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inter(color: Colors.white),
+                          decoration: _inputDecoration('Meta (Monto S/ o # de compras)'),
+                          validator: (val) => double.tryParse(val!) == null ? 'Inválido' : null,
+                        ),
+                        const SizedBox(height: 28),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: selectedBank.primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                            onPressed: () async {
+                              if (!formKey.currentState!.validate()) return;
+                              try {
+                                await _service.updateCard(
+                                  id: cardToEdit.id,
+                                  banco: selectedBank.name,
+                                  nombreTarjeta: nombreController.text,
+                                  diaCierre: int.parse(cierreController.text),
+                                  diaPago: int.parse(pagoController.text),
+                                  metaMensual: double.parse(metaController.text),
+                                  limiteCredito: double.parse(limiteController.text),
+                                  membershipFee: double.parse(membresiaController.text),
+                                  exemptionType: exemptionType,
+                                  exemptionTarget: double.parse(metaController.text),
+                                );
+                                if (ctx.mounted) Navigator.of(ctx).pop();
+                                _refresh();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('¡Tarjeta actualizada! 💳'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                              }
+                            },
+                            child: Text('Guardar Cambios', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showActionMenu() {
@@ -1198,11 +1488,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildGastosTab(List<_CardWithExpenses> data, NumberFormat currencyFormat) {
     final allExpenses = <Expense>[];
     for (var item in data) {
-      allExpenses.addAll(item.expenses);
+      if (_selectedFilterCard == null || item.card.id == _selectedFilterCard!.id) {
+        allExpenses.addAll(item.expenses);
+      }
     }
     allExpenses.sort((a, b) => b.fechaConsumo.compareTo(a.fechaConsumo));
 
-    if (allExpenses.isEmpty) {
+    // Calculate total spent only for the selected card (or all)
+    final totalSpentOverall = allExpenses.fold(0.0, (sum, e) => sum + e.monto);
+
+    Widget emptyState = allExpenses.isEmpty
+        ? Center(
+            key: const ValueKey('empty_gastos'),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Icon(Icons.receipt_long_rounded, size: 40, color: Colors.white24),
+                ),
+                const SizedBox(height: 20),
+                Text('Sin gastos registrados', style: GoogleFonts.inter(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Text('Tus consumos aparecerán aquí', style: GoogleFonts.inter(color: Colors.white24, fontSize: 13)),
+              ],
+            ),
+          )
+        : const SizedBox.shrink();
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1225,8 +1542,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    final totalSpentOverall = allExpenses.fold(0.0, (sum, e) => sum + e.monto);
-
     // Group by category
     final grouped = <String, List<Expense>>{};
     for (final exp in allExpenses) {
@@ -1237,48 +1552,146 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Column(
       children: [
-        // Total Spent Summary Header
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1E38),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.indigo.withOpacity(0.3)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Gasto Total Registrado', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text(
-                    currencyFormat.format(totalSpentOverall),
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+        // Filter Carousel
+        if (data.isNotEmpty) ...[
+          Container(
+            height: 48,
+            margin: const EdgeInsets.only(top: 8, bottom: 8),
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                GestureDetector(
+                  onTap: () => setState(() => _selectedFilterCard = null),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: _selectedFilterCard == null ? Colors.indigoAccent : const Color(0xFF1E1E38),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _selectedFilterCard == null ? Colors.white30 : Colors.transparent),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Todas',
+                      style: GoogleFonts.inter(
+                        color: _selectedFilterCard == null ? Colors.white : Colors.white54,
+                        fontWeight: _selectedFilterCard == null ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.indigo.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  '${allExpenses.length} consumos',
-                  style: GoogleFonts.inter(color: Colors.indigoAccent, fontSize: 13, fontWeight: FontWeight.w700),
-                ),
+                ...data.map((item) {
+                  final isSelected = _selectedFilterCard?.id == item.card.id;
+                  final bankData = BankCatalog.getBankData(item.card.banco);
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedFilterCard = item.card),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        gradient: isSelected ? LinearGradient(colors: [bankData.primaryColor, bankData.secondaryColor]) : null,
+                        color: isSelected ? null : const Color(0xFF1E1E38),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: isSelected ? Colors.white54 : Colors.transparent),
+                        boxShadow: isSelected ? [BoxShadow(color: bankData.primaryColor.withOpacity(0.4), blurRadius: 8)] : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.credit_card_rounded, color: isSelected ? Colors.white : Colors.white30, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            item.card.banco,
+                            style: GoogleFonts.inter(
+                              color: isSelected ? Colors.white : Colors.white54,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+
+        // Total Spent Summary Header
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: Container(
+            key: ValueKey('header_${_selectedFilterCard?.id ?? "all"}'),
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: _selectedFilterCard != null 
+                  ? LinearGradient(
+                      colors: [
+                        BankCatalog.getBankData(_selectedFilterCard!.banco).primaryColor.withOpacity(0.15),
+                        BankCatalog.getBankData(_selectedFilterCard!.banco).secondaryColor.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: _selectedFilterCard == null ? const Color(0xFF1E1E38) : null,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _selectedFilterCard != null 
+                    ? BankCatalog.getBankData(_selectedFilterCard!.banco).primaryColor.withOpacity(0.3)
+                    : Colors.indigo.withOpacity(0.3),
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_selectedFilterCard == null ? 'Gasto Total Registrado' : 'Gasto con ${_selectedFilterCard!.banco}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(
+                      currencyFormat.format(totalSpentOverall),
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _selectedFilterCard != null 
+                        ? BankCatalog.getBankData(_selectedFilterCard!.banco).primaryColor.withOpacity(0.2)
+                        : Colors.indigo.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${allExpenses.length} consumos',
+                    style: GoogleFonts.inter(
+                      color: _selectedFilterCard != null ? Colors.white : Colors.indigoAccent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
-        // Expense List Grouped by Category with Swipe-to-Delete
+        // Expense List
         Expanded(
-          child: ListView.builder(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: allExpenses.isEmpty 
+              ? emptyState 
+              : ListView.builder(
+                  key: ValueKey('list_${_selectedFilterCard?.id ?? "all"}'),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: categoryKeys.length,
             itemBuilder: (ctx, catIndex) {
@@ -1371,12 +1784,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: bankData.primaryColor.withOpacity(0.2),
+                                  color: bankData.primaryColor,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   card.banco,
-                                  style: GoogleFonts.inter(color: bankData.primaryColor, fontSize: 11, fontWeight: FontWeight.w700),
+                                  style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                                 ),
                               ),
                             ],
@@ -1547,6 +1960,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildNavBarItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    return InkWell(
+      onTap: () => setState(() => _currentIndex = index),
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.indigoAccent : Colors.white30,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: isSelected ? Colors.indigoAccent : Colors.white30,
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
@@ -1595,24 +2038,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: const Icon(Icons.add_rounded, size: 28),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF111125),
-          border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
-        ),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: Colors.indigoAccent,
-          unselectedItemColor: Colors.white30,
-          selectedLabelStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: GoogleFonts.inter(fontSize: 11),
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.credit_card_rounded), label: 'Tarjetas'),
-            BottomNavigationBarItem(icon: Icon(Icons.receipt_long_rounded), label: 'Gastos'),
-            BottomNavigationBarItem(icon: Icon(Icons.stars_rounded), label: 'Membresía'),
+      bottomNavigationBar: BottomAppBar(
+        color: const Color(0xFF111125),
+        surfaceTintColor: Colors.transparent,
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildNavBarItem(0, Icons.credit_card_rounded, 'Tarjetas'),
+            _buildNavBarItem(1, Icons.receipt_long_rounded, 'Gastos'),
+            const SizedBox(width: 48), // Espacio para el FAB
+            _buildNavBarItem(2, Icons.stars_rounded, 'Membresía'),
           ],
         ),
       ),

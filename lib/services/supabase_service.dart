@@ -55,6 +55,32 @@ class SupabaseService {
     await _client.from('tarjetas').delete().eq('id', cardId);
   }
 
+  /// Actualiza una tarjeta existente.
+  Future<void> updateCard({
+    required String id,
+    required String banco,
+    required String nombreTarjeta,
+    required int diaCierre,
+    required int diaPago,
+    required double metaMensual,
+    required double limiteCredito,
+    required double membershipFee,
+    required String exemptionType,
+    required double exemptionTarget,
+  }) async {
+    await _client.from('tarjetas').update({
+      'banco': banco,
+      'nombre_tarjeta': nombreTarjeta,
+      'dia_cierre': diaCierre,
+      'dia_pago': diaPago,
+      'meta_mensual': metaMensual,
+      'limite_credito': limiteCredito,
+      'membership_fee': membershipFee,
+      'exemption_type': exemptionType,
+      'exemption_target': exemptionTarget,
+    }).eq('id', id);
+  }
+
   // ─────────────────────────────────────────
   // GASTOS
   // ─────────────────────────────────────────
