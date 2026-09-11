@@ -294,11 +294,25 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
 
           // Numbers Summary Block
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.08),
+                  Colors.white.withOpacity(0.02),
+                ],
+              ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  spreadRadius: -2,
+                )
+              ],
             ),
             child: Row(
               children: [
@@ -306,30 +320,31 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Gastado', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
-                      const SizedBox(height: 4),
+                      Text('Gastado', style: GoogleFonts.inter(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 6),
                       Text(
                         widget.isCountBased ? '${widget.currentValue.toInt()} compras' : currencyFmt.format(widget.currentValue),
-                        style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
                 ),
-                Container(width: 1, height: 30, color: Colors.white10),
+                Container(width: 1.5, height: 40, color: Colors.white.withOpacity(0.1)),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(isCompleted ? 'Estado' : 'Falta', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
-                      const SizedBox(height: 4),
+                      Text(isCompleted ? 'Estado' : 'Falta', style: GoogleFonts.inter(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 6),
                       Text(
                         isCompleted
                             ? '¡Exonerado! 🎉'
                             : (widget.isCountBased ? '${remainingAmount.toInt()} compra' : currencyFmt.format(remainingAmount)),
                         style: GoogleFonts.inter(
-                          color: isCompleted ? const Color(0xFF10B981) : Colors.amberAccent,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                          color: isCompleted ? const Color(0xFF10B981) : Colors.amber.shade300,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
@@ -532,24 +547,53 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
 
         const SizedBox(height: 16),
 
-        // Status text (reemplazando texto estático por bloques)
+        // Status text (Glassmorphism)
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                widget.ringColor.withOpacity(0.15),
+                Colors.black.withOpacity(0.2),
+              ],
+            ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: widget.ringColor.withOpacity(0.3), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 12,
+                spreadRadius: -2,
+              )
+            ],
           ),
           child: Column(
             children: [
-              Text(
-                widget.statusText.replaceFirst('Gastaste', 'Gastado:').replaceFirst(' de ', ' / ').replaceFirst('Falta:', '\nFalta:'),
-                style: GoogleFonts.inter(
-                  color: widget.progress >= 1.0 ? const Color(0xFF10B981) : Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-                textAlign: TextAlign.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Gastado: ', style: GoogleFonts.inter(color: Colors.white70, fontSize: 14)),
+                  Text(currencyFmt.format(widget.currentValue), style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                  Text(' / ', style: GoogleFonts.inter(color: Colors.white30, fontSize: 16)),
+                  Text(currencyFmt.format(widget.targetValue), style: GoogleFonts.inter(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Falta: ', style: GoogleFonts.inter(color: Colors.white70, fontSize: 14)),
+                  Text(currencyFmt.format((widget.targetValue - widget.currentValue).clamp(0.0, double.infinity)), 
+                    style: GoogleFonts.inter(
+                      color: widget.progress >= 1.0 ? const Color(0xFF10B981) : Colors.amber.shade300,
+                      fontSize: 18, 
+                      fontWeight: FontWeight.w900
+                    )
+                  ),
+                ],
               ),
             ],
           ),

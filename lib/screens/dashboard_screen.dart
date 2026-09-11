@@ -1115,6 +1115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (_sortOption == CardSortOption.custom) {
                 return ReorderableListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  buildDefaultDragHandles: false,
                   proxyDecorator: (child, index, animation) {
                     return Material(
                       color: Colors.transparent,
@@ -1136,13 +1137,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return Padding(
                       key: ValueKey(item.card.id),
                       padding: const EdgeInsets.only(bottom: 24),
-                      child: CardProgressWidget(
-                        card: item.card,
-                        consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
-                        currencyFormat: currencyFormat,
-                        daysRemaining: _service.getDaysUntilCycleEnd(item.card),
-                        onTap: () => _showCardDetailModal(item),
-                        onDelete: () => _showDeleteCardConfirmation(item.card),
+                      child: Stack(
+                        children: [
+                          CardProgressWidget(
+                            card: item.card,
+                            consumption: _service.getCurrentCycleConsumption(item.card, item.expenses),
+                            currencyFormat: currencyFormat,
+                            daysRemaining: _service.getDaysUntilCycleEnd(item.card),
+                            onTap: () => _showCardDetailModal(item),
+                            onDelete: () => _showDeleteCardConfirmation(item.card),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: ReorderableDragStartListener(
+                              index: i,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white24),
+                                ),
+                                child: const Icon(Icons.drag_indicator_rounded, color: Colors.white, size: 24),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
