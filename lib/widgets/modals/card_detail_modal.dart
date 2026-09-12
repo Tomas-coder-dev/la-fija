@@ -89,12 +89,26 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              Text(
-                                'Límite: ${currencyFmt.format(card.limiteCredito)} · Cierra día ${card.diaCierre}',
-                                style: GoogleFonts.inter(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
+                                    child: Text('Límite: ${currencyFmt.format(card.limiteCredito)}', style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.event_rounded, color: Colors.white, size: 12),
+                                        const SizedBox(width: 4),
+                                        Text('Cierra día ${card.diaCierre}', style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

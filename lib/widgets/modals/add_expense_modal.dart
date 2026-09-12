@@ -117,6 +117,7 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                     setModalState(() => isListening = true);
                     speech.listen(
                       localeId: 'es_PE',
+                      pauseFor: const Duration(seconds: 3),
                       onResult: (result) {
                         if (result.finalResult) {
                           parseVoiceInputWithAI(result.recognizedWords);
@@ -223,72 +224,84 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                               ),
                             ),
 
-                          // Card selector
-                          DropdownButtonFormField<CreditCard>(
-                            decoration: _inputDecoration('Tarjeta de Crédito', theme),
-                            dropdownColor: isDark ? const Color(0xFF252540) : Colors.white,
-                            style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color, fontWeight: FontWeight.w600),
-                            value: selectedCard,
-                            hint: Text('Selecciona una tarjeta', style: GoogleFonts.inter(color: theme.textTheme.bodySmall?.color)),
-                            items: cards.map((c) {
-                              final bData = BankCatalog.getBankData(c.banco);
-                              final isRec = recommendedCard?.id == c.id;
-                              
-                              final isCountBased = c.exemptionType == 'count';
-                              final currentConsumption = supabaseService.getCurrentCycleConsumption(c, expenses);
-                              final currentCount = supabaseService.getCurrentCycleExpenses(c, expenses).length;
-                              final targetValue = c.metaMensual;
-                              
-                              final progressText = targetValue > 0 ? (isCountBased 
-                                ? '$currentCount/${targetValue.toInt()}'
-                                : 'S/${currentConsumption.toStringAsFixed(0)}/S/${targetValue.toInt()}') : '';
+                          // Card selector (Horizontal list instead of dropdown)
+                          Text('Tarjeta de Crédito', style: GoogleFonts.inter(color: theme.textTheme.bodySmall?.color, fontSize: 13, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 60,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: cards.length,
+                              itemBuilder: (context, index) {
+                                final c = cards[index];
+                                final bData = BankCatalog.getBankData(c.banco);
+                                final isRec = recommendedCard?.id == c.id;
+                                final isSelected = selectedCard?.id == c.id;
+                                
+                                final isCountBased = c.exemptionType == 'count';
+                                final currentConsumption = supabaseService.getCurrentCycleConsumption(c, expenses);
+                                final currentCount = supabaseService.getCurrentCycleExpenses(c, expenses).length;
+                                final targetValue = c.metaMensual;
+                                
+                                final progressText = targetValue > 0 ? (isCountBased 
+                                  ? '$currentCount/${targetValue.toInt()}'
+                                  : 'S/${currentConsumption.toStringAsFixed(0)} / S/${targetValue.toInt()}') : '';
+                                
+                                final isGoalMet = currentConsumption >= targetValue || (isCountBased && currentCount >= targetValue);
 
-                              return DropdownMenuItem(
-                                value: c,
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        color: bData.primaryColor,
-                                        shape: BoxShape.circle,
+                                return GestureDetector(
+                                  onTap: () => setModalState(() => selectedCard = c),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    margin: const EdgeInsets.only(right: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? bData.primaryColor.withOpacity(0.15) : (isDark ? const Color(0xFF1E1E38) : Colors.grey[200]),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: isSelected ? bData.primaryColor : Colors.transparent,
+                                        width: 1.5,
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
-                                    Text('${c.banco} · ${c.nombreTarjeta}', style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color)),
-                                    if (targetValue > 0) ...[
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: currentConsumption >= targetValue || (isCountBased && currentCount >= targetValue) 
-                                              ? Colors.green.withOpacity(0.2) 
-                                              : Colors.orange.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(color: bData.primaryColor, shape: BoxShape.circle),
                                         ),
-                                        child: Text(
-                                          progressText, 
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10, 
-                                            fontWeight: FontWeight.w600,
-                                            color: currentConsumption >= targetValue || (isCountBased && currentCount >= targetValue) 
-                                              ? Colors.green 
-                                              : Colors.orange,
-                                          ),
+                                        const SizedBox(width: 8),
+                                        Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(c.nombreTarjeta, style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color, fontWeight: FontWeight.w700, fontSize: 13)),
+                                                if (isRec) ...[
+                                                  const SizedBox(width: 4),
+                                                  const Icon(Icons.star, color: Colors.amber, size: 14),
+                                                ]
+                                              ],
+                                            ),
+                                            if (targetValue > 0)
+                                              Text(
+                                                'Falta: ${isGoalMet ? 'Meta lograda' : progressText}',
+                                                style: GoogleFonts.inter(
+                                                  color: isGoalMet ? Colors.green : Colors.orange,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                          ],
                                         ),
-                                      ),
-                                    ],
-                                    if (isRec) ...[
-                                      const SizedBox(width: 6),
-                                      const Icon(Icons.star, color: Colors.amber, size: 14),
-                                    ]
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) => setModalState(() => selectedCard = val),
-                            validator: (val) => val == null ? 'Selecciona una tarjeta' : null,
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                           const SizedBox(height: 20),
 

@@ -106,6 +106,7 @@ class MembershipTab extends ConsumerWidget {
                   targetValue: targetValue,
                   isCountBased: isCountBased,
                   membershipFee: card.membershipFee,
+                  cycleEndDate: supabaseService.getCycleEndDate(card),
                 ),
               );
             },
