@@ -34,35 +34,39 @@ class MembershipTab extends ConsumerWidget {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Progreso de Membresía',
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: theme.textTheme.bodyLarge?.color,
-              letterSpacing: -0.5,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Membresía',
+                style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: theme.textTheme.bodyLarge?.color,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Lleva el control para evitar pagos anuales.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: theme.textTheme.bodySmall?.color,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Lleva el control para evitar pagos anuales innecesarios.',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: theme.textTheme.bodySmall?.color,
-            ),
-          ),
-          const SizedBox(height: 24),
+        ),
 
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+        Expanded(
+          child: PageView.builder(
+            controller: PageController(viewportFraction: 0.88),
             itemCount: cards.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 24),
             itemBuilder: (context, index) {
               final card = cards[index];
               final bankData = BankCatalog.getBankData(card.banco);
@@ -81,30 +85,34 @@ class MembershipTab extends ConsumerWidget {
                   ? (targetValue - currentValue) / daysRemaining
                   : 0.0;
 
-              return ProgressRingWidget(
-                progress: progress,
-                ringColor: bankData.primaryColor,
-                secondaryColor: bankData.secondaryColor,
-                bgRingColor: theme.brightness == Brightness.dark ? const Color(0xFF1E1E38) : Colors.grey[200]!,
-                centerLabel: isCountBased 
-                    ? '${currentCycleExpenses.length}/${targetValue.toInt()}' 
-                    : '${(progress * 100).clamp(0, 100).toInt()}%',
-                statusText: progress >= 1.0 ? 'Meta Completada' : 'En progreso',
-                cardName: '${card.banco} ${card.nombreTarjeta}',
-                showPenalty: true,
-                penaltyText: 'Evita pagar S/ ${card.membershipFee}',
-                isStrictMonthly: bankData.isStrictMonthly,
-                daysRemaining: daysRemaining,
-                dailyNeeded: isCountBased ? 0 : dailyNeeded,
-                currentValue: currentValue,
-                targetValue: targetValue,
-                isCountBased: isCountBased,
-                membershipFee: card.membershipFee,
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+                child: ProgressRingWidget(
+                  progress: progress,
+                  ringColor: bankData.primaryColor,
+                  secondaryColor: bankData.secondaryColor,
+                  bgRingColor: theme.brightness == Brightness.dark ? const Color(0xFF1E1E38) : Colors.grey[200]!,
+                  centerLabel: isCountBased 
+                      ? '${currentCycleExpenses.length}/${targetValue.toInt()}' 
+                      : '${(progress * 100).clamp(0, 100).toInt()}%',
+                  statusText: progress >= 1.0 ? 'Meta Completada' : 'En progreso',
+                  cardName: '${card.banco} ${card.nombreTarjeta}',
+                  showPenalty: true,
+                  penaltyText: 'Evita pagar S/ ${card.membershipFee}',
+                  isStrictMonthly: bankData.isStrictMonthly,
+                  daysRemaining: daysRemaining,
+                  dailyNeeded: isCountBased ? 0 : dailyNeeded,
+                  currentValue: currentValue,
+                  targetValue: targetValue,
+                  isCountBased: isCountBased,
+                  membershipFee: card.membershipFee,
+                ),
               );
             },
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 20), // Bottom spacing for navigation bar
+      ],
     );
   }
 }

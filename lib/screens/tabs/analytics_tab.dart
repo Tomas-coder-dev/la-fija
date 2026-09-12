@@ -15,6 +15,7 @@ class AnalyticsTab extends ConsumerWidget {
     final expensesState = ref.watch(expensesProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -22,11 +23,12 @@ class AnalyticsTab extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
           child: Text(
-            'Analíticas',
+            'Resumen',
             style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
               color: theme.textTheme.bodyLarge?.color,
+              letterSpacing: -0.5,
             ),
           ),
         ),
@@ -37,7 +39,12 @@ class AnalyticsTab extends ConsumerWidget {
             error: (err, stack) => Center(child: Text('Error: $err')),
             data: (expenses) {
               if (expenses.isEmpty) {
-                return const Center(child: Text('No hay suficientes datos para analíticas.'));
+                return Center(
+                  child: Text(
+                    'No hay suficientes datos para analíticas.',
+                    style: GoogleFonts.inter(color: theme.textTheme.bodySmall?.color),
+                  ),
+                );
               }
               
               // Agrupar por categoría
@@ -55,82 +62,162 @@ class AnalyticsTab extends ConsumerWidget {
                 return PieChartSectionData(
                   color: catData.color,
                   value: entry.value,
-                  title: '${percentage.toStringAsFixed(0)}%',
-                  radius: 50,
-                  titleStyle: const TextStyle(
-                    fontSize: 14,
+                  title: percentage >= 5 ? '${percentage.toStringAsFixed(0)}%' : '',
+                  radius: 60,
+                  titleStyle: GoogleFonts.inter(
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
+                  badgeWidget: _Badge(catData.emoji, size: 24, borderColor: catData.color),
+                  badgePositionPercentageOffset: .98,
                 );
               }).toList();
+
+              // Sort for the list below
+              final sortedEntries = groupedByCategory.entries.toList()
+                ..sort((a, b) => b.value.compareTo(a.value));
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(24).copyWith(bottom: 100),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Tarjeta Principal - Total Gastado
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E1E38) : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: isDark ? [] : [
-                          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-                        ]
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primary,
+                            theme.colorScheme.secondary,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Distribución de Gastos',
+                            'Total Gastado (Este Ciclo)',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: theme.textTheme.bodyLarge?.color,
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            height: 200,
-                            child: PieChart(
-                              PieChartData(
-                                sectionsSpace: 2,
-                                centerSpaceRadius: 40,
-                                sections: pieSections,
-                              ),
+                          const SizedBox(height: 8),
+                          Text(
+                            currencyFmt.format(total),
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1,
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          ...groupedByCategory.entries.map((entry) {
-                            final catData = ExpenseCategory.fromKey(entry.key);
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: catData.color,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    catData.label,
-                                    style: GoogleFonts.inter(fontSize: 14, color: theme.textTheme.bodyMedium?.color),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ').format(entry.value),
-                                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: theme.textTheme.bodyLarge?.color),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 32),
+
+                    Text(
+                      'Distribución',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Gráfico de torta
+                    SizedBox(
+                      height: 220,
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 4,
+                          centerSpaceRadius: 50,
+                          sections: pieSections,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Lista de detalles
+                    ...sortedEntries.map((entry) {
+                      final catData = ExpenseCategory.fromKey(entry.key);
+                      final percentage = (entry.value / total) * 100;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E1E38) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: isDark ? [] : [
+                            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))
+                          ]
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: catData.color.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(catData.emoji, style: const TextStyle(fontSize: 24)),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    catData.label,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                      color: theme.textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${percentage.toStringAsFixed(1)}% del total',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: theme.textTheme.bodySmall?.color,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              currencyFmt.format(entry.value),
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ),
               );
@@ -138,6 +225,42 @@ class AnalyticsTab extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge(
+    this.emoji, {
+    required this.size,
+    required this.borderColor,
+  });
+  final String emoji;
+  final double size;
+  final Color borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: PieChart.defaultDuration,
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: borderColor, width: 2),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withOpacity(.2),
+            offset: const Offset(3, 3),
+            blurRadius: 3,
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(size * .15),
+      child: Center(
+        child: Text(emoji, style: TextStyle(fontSize: size * 0.5)),
+      ),
     );
   }
 }

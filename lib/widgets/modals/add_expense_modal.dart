@@ -233,6 +233,16 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                             items: cards.map((c) {
                               final bData = BankCatalog.getBankData(c.banco);
                               final isRec = recommendedCard?.id == c.id;
+                              
+                              final isCountBased = c.exemptionType == 'count';
+                              final currentConsumption = supabaseService.getCurrentCycleConsumption(c, expenses);
+                              final currentCount = supabaseService.getCurrentCycleExpenses(c, expenses).length;
+                              final targetValue = c.metaMensual;
+                              
+                              final progressText = targetValue > 0 ? (isCountBased 
+                                ? '$currentCount/${targetValue.toInt()}'
+                                : 'S/${currentConsumption.toStringAsFixed(0)}/S/${targetValue.toInt()}') : '';
+
                               return DropdownMenuItem(
                                 value: c,
                                 child: Row(
@@ -247,6 +257,28 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                                     ),
                                     const SizedBox(width: 10),
                                     Text('${c.banco} · ${c.nombreTarjeta}', style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color)),
+                                    if (targetValue > 0) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: currentConsumption >= targetValue || (isCountBased && currentCount >= targetValue) 
+                                              ? Colors.green.withOpacity(0.2) 
+                                              : Colors.orange.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          progressText, 
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10, 
+                                            fontWeight: FontWeight.w600,
+                                            color: currentConsumption >= targetValue || (isCountBased && currentCount >= targetValue) 
+                                              ? Colors.green 
+                                              : Colors.orange,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     if (isRec) ...[
                                       const SizedBox(width: 6),
                                       const Icon(Icons.star, color: Colors.amber, size: 14),
