@@ -53,7 +53,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                 _buildFilterChip('Todas', null, theme, isDark),
                 ...cardsState.value!.map((c) {
                   return _buildFilterChip(
-                    '${c.banco} ${c.nombreTarjeta}', 
+                    c.banco,
                     c.id, 
                     theme, 
                     isDark, 
@@ -96,7 +96,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                   if (_selectedCardId == null && cardsState.value != null) {
                     try {
                       final card = cardsState.value!.firstWhere((c) => c.id == exp.tarjetaId);
-                      cardLabel = '${card.banco} ${card.nombreTarjeta}';
+                      cardLabel = card.banco;
                       cardColor = BankCatalog.getBankData(card.banco).primaryColor;
                     } catch (_) {}
                   }
