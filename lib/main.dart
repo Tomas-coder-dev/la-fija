@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'screens/dashboard_screen.dart';
+import 'screens/main_layout.dart';
 import 'screens/login_screen.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await Hive.initFlutter();
+  await Hive.openBox('offline_cache');
 
   await Supabase.initialize(
     url: 'https://cobiksksbjjzjydjvjul.supabase.co',
     anonKey: 'sb_publishable_GGoc1nzgX8ANDvADaJ28LQ_w1R5VdvG',
   );
 
-  runApp(const LaFijaApp());
+  runApp(const ProviderScope(child: LaFijaApp()));
 }
 
 class LaFijaApp extends StatelessWidget {
@@ -24,18 +29,9 @@ class LaFijaApp extends StatelessWidget {
     return MaterialApp(
       title: 'La Fija',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
-        ),
-        textTheme: GoogleFonts.interTextTheme(
-          ThemeData.dark().textTheme,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0D0D1A),
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system, // Will adapt to device settings
       home: const _AuthGate(),
     );
   }
@@ -71,7 +67,7 @@ class _AuthGateState extends State<_AuthGate> {
             : Supabase.instance.client.auth.currentSession;
 
         if (session != null) {
-          return const DashboardScreen();
+          return const MainLayout();
         }
 
         return const LoginScreen();

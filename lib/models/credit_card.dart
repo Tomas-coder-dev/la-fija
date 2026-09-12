@@ -46,5 +46,9 @@ class CreditCard {
         'dia_cierre': diaCierre,
         'dia_pago': diaPago,
         'meta_mensual': metaMensual,
+        'limite_credito': limiteCredito,
+        'membership_fee': membershipFee,
+        'exemption_type': exemptionType,
+        'exemption_target': exemptionTarget,
       };
 }

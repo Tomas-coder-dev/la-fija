@@ -1,12 +1,14 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/credit_card.dart';
 import '../models/expense.dart';
+import 'local_storage_service.dart';
 
 /// Servicio principal para interactuar con la base de datos de Supabase.
 /// Asume que el usuario está autenticado y que las tablas `tarjetas` y `gastos`
 /// tienen Row-Level Security (RLS) activo, filtrando por el usuario actual.
 class SupabaseService {
   final _client = Supabase.instance.client;
+  final _localService = LocalStorageService();
 
   // ─────────────────────────────────────────
   // TARJETAS
@@ -14,10 +16,17 @@ class SupabaseService {
 
   /// Obtiene todas las tarjetas del usuario autenticado.
   Future<List<CreditCard>> getCards() async {
-    final response = await _client.from('tarjetas').select();
-    return (response as List)
-        .map((json) => CreditCard.fromJson(json as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await _client.from('tarjetas').select();
+      final cards = (response as List)
+          .map((json) => CreditCard.fromJson(json as Map<String, dynamic>))
+          .toList();
+      _localService.saveCardsLocally(cards);
+      return cards;
+    } catch (e) {
+      // Fallback a caché local
+      return _localService.getLocalCards();
+    }
   }
 
   /// Inserta una nueva tarjeta en la tabla `tarjetas`.
@@ -87,13 +96,37 @@ class SupabaseService {
 
   /// Obtiene todos los gastos asociados a una tarjeta específica.
   Future<List<Expense>> getExpensesByCard(String cardId) async {
-    final response = await _client
-        .from('gastos')
-        .select()
-        .eq('tarjeta_id', cardId);
-    return (response as List)
-        .map((json) => Expense.fromJson(json as Map<String, dynamic>))
-        .toList();
+    try {
+      final response = await _client
+          .from('gastos')
+          .select()
+          .eq('tarjeta_id', cardId);
+      final expenses = (response as List)
+          .map((json) => Expense.fromJson(json as Map<String, dynamic>))
+          .toList();
+      
+      // Update this specific card's expenses in the local storage
+      // In a real app we might fetch ALL expenses at once to cache them properly,
+      // but for now we'll just cache whatever we fetch.
+      return expenses;
+    } catch (e) {
+      final allLocal = _localService.getLocalExpenses();
+      return allLocal.where((ex) => ex.tarjetaId == cardId).toList();
+    }
+  }
+  
+  /// Obtiene TODOS los gastos de todas las tarjetas para cache.
+  Future<List<Expense>> getAllExpenses() async {
+    try {
+      final response = await _client.from('gastos').select();
+      final expenses = (response as List)
+          .map((json) => Expense.fromJson(json as Map<String, dynamic>))
+          .toList();
+      _localService.saveExpensesLocally(expenses);
+      return expenses;
+    } catch (e) {
+      return _localService.getLocalExpenses();
+    }
   }
 
   /// Inserta un nuevo gasto en la tabla `gastos`.
