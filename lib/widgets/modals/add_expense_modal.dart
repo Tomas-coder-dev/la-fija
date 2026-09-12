@@ -8,7 +8,7 @@ import '../../models/credit_card.dart';
 import '../../models/expense_category.dart';
 import '../../providers/cards_provider.dart';
 import '../../providers/expenses_provider.dart';
-import '../../services/supabase_service.dart';
+import '../../services/ai_service.dart';
 
 Future<void> showAddExpenseModal(BuildContext context) async {
   final formKey = GlobalKey<FormState>();
@@ -17,6 +17,7 @@ Future<void> showAddExpenseModal(BuildContext context) async {
   String selectedCategory = 'otros';
 
   bool isListening = false;
+  bool isProcessingAI = false;
   final stt.SpeechToText speech = stt.SpeechToText();
 
   await showModalBottomSheet(
@@ -29,6 +30,7 @@ Future<void> showAddExpenseModal(BuildContext context) async {
           final cardsState = ref.watch(cardsProvider);
           final expensesState = ref.watch(expensesProvider);
           final supabaseService = ref.read(supabaseServiceProvider);
+          final aiService = ref.read(aiServiceProvider);
           
           final cards = cardsState.value ?? [];
           final expenses = expensesState.value ?? [];
@@ -45,7 +47,6 @@ Future<void> showAddExpenseModal(BuildContext context) async {
           }
 
           if (selectedCard == null && cards.isNotEmpty) {
-            // Inteligencia: Sugerir la mejor tarjeta por defecto
             final recommended = supabaseService.getRecommendedCard(cards, expenses, 0.0);
             selectedCard = recommended ?? cards.first;
           }
@@ -59,35 +60,49 @@ Future<void> showAddExpenseModal(BuildContext context) async {
               final recommendedCard = supabaseService.getRecommendedCard(cards, expenses, double.tryParse(montoController.text) ?? 0.0);
               final isRecommended = recommendedCard != null && selectedCard?.id == recommendedCard.id;
 
-              void parseVoiceInput(String text) {
-                final lower = text.toLowerCase();
+              Future<void> parseVoiceInputWithAI(String text) async {
+                if (text.isEmpty) return;
                 
-                // 1. Extraer monto (buscando números)
-                final amountMatch = RegExp(r'\d+(\.\d+)?').firstMatch(lower);
-                if (amountMatch != null) {
-                  montoController.text = amountMatch.group(0)!;
-                }
+                setModalState(() {
+                  isListening = false;
+                  isProcessingAI = true;
+                });
 
-                // 2. Extraer Categoría
-                for (final cat in ExpenseCategory.all) {
-                  if (lower.contains(cat.label.toLowerCase()) || lower.contains(cat.key.toLowerCase())) {
-                    selectedCategory = cat.key;
-                    break;
-                  }
-                }
-                // Sinónimos comunes
-                if (lower.contains('supermercado') || lower.contains('plaza vea') || lower.contains('wong')) selectedCategory = 'super';
-                if (lower.contains('gasolina') || lower.contains('grifo') || lower.contains('taxi')) selectedCategory = 'transporte';
-                if (lower.contains('restaurante') || lower.contains('cena') || lower.contains('almuerzo')) selectedCategory = 'comida';
-                if (lower.contains('cine') || lower.contains('netflix')) selectedCategory = 'entretenimiento';
-                if (lower.contains('ropa') || lower.contains('zapato')) selectedCategory = 'ropa';
-                if (lower.contains('medicina') || lower.contains('farmacia') || lower.contains('pastilla')) selectedCategory = 'salud';
+                final availableCards = cards.map((c) => c.banco).toList();
+                final availableCategories = ExpenseCategory.all.map((c) => c.key).toList();
 
-                // 3. Extraer Tarjeta
-                for (final card in cards) {
-                  if (lower.contains(card.banco.toLowerCase()) || lower.contains(card.nombreTarjeta.toLowerCase())) {
-                    selectedCard = card;
-                    break;
+                final result = await aiService.parseExpenseVoice(
+                  text: text,
+                  availableCards: availableCards,
+                  availableCategories: availableCategories,
+                );
+
+                if (result != null && ctx.mounted) {
+                  setModalState(() {
+                    if (result['monto'] != null) {
+                      montoController.text = result['monto'].toString();
+                    }
+                    if (result['categoria'] != null && availableCategories.contains(result['categoria'])) {
+                      selectedCategory = result['categoria'];
+                    }
+                    if (result['tarjeta_id'] != null) {
+                      final matchedCard = cards.where((c) => 
+                        c.banco.toLowerCase() == result['tarjeta_id'].toString().toLowerCase() ||
+                        c.nombreTarjeta.toLowerCase() == result['tarjeta_id'].toString().toLowerCase()
+                      ).firstOrNull;
+                      
+                      if (matchedCard != null) {
+                        selectedCard = matchedCard;
+                      }
+                    }
+                    isProcessingAI = false;
+                  });
+                } else {
+                  if (ctx.mounted) {
+                    setModalState(() => isProcessingAI = false);
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('No se pudo procesar el audio con IA. Intenta de nuevo.'))
+                    );
                   }
                 }
               }
@@ -103,12 +118,11 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                     speech.listen(
                       localeId: 'es_PE',
                       onResult: (result) {
-                        setModalState(() {
-                          parseVoiceInput(result.recognizedWords);
-                          if (result.finalResult) {
-                            isListening = false;
-                          }
-                        });
+                        if (result.finalResult) {
+                          parseVoiceInputWithAI(result.recognizedWords);
+                        } else {
+                          setModalState(() {}); // Force rebuild to show interim text if needed
+                        }
                       },
                     );
                   }
@@ -161,13 +175,15 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                                 ],
                               ),
                               FloatingActionButton.small(
-                                onPressed: listenVoice,
+                                onPressed: isProcessingAI ? null : listenVoice,
                                 backgroundColor: isListening ? Colors.redAccent : theme.colorScheme.primary.withOpacity(0.1),
                                 elevation: 0,
-                                child: Icon(
-                                  isListening ? Icons.mic : Icons.mic_none, 
-                                  color: isListening ? Colors.white : theme.colorScheme.primary
-                                ),
+                                child: isProcessingAI
+                                    ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary))
+                                    : Icon(
+                                        isListening ? Icons.mic : Icons.mic_none, 
+                                        color: isListening ? Colors.white : theme.colorScheme.primary
+                                      ),
                               ),
                             ],
                           ),
@@ -175,6 +191,11 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text('Te escucho... ej: "45 soles en comida con BCP"', style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 12, fontStyle: FontStyle.italic)),
+                            ),
+                          if (isProcessingAI)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text('🧠 Gemini está extrayendo los datos...', style: GoogleFonts.inter(color: theme.colorScheme.primary, fontSize: 12, fontStyle: FontStyle.italic)),
                             ),
                           const SizedBox(height: 20),
 
