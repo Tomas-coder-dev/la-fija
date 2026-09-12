@@ -126,6 +126,15 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                         }
                       },
                     );
+                  } else {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('El micrófono no está disponible. Revisa los permisos de tu navegador o dispositivo.'),
+                          backgroundColor: Colors.redAccent,
+                        )
+                      );
+                    }
                   }
                 } else {
                   setModalState(() => isListening = false);
@@ -278,7 +287,7 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                                           children: [
                                             Row(
                                               children: [
-                                                Text(c.nombreTarjeta, style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color, fontWeight: FontWeight.w700, fontSize: 13)),
+                                                Text('${bData.name} ${c.nombreTarjeta}', style: GoogleFonts.inter(color: theme.textTheme.bodyMedium?.color, fontWeight: FontWeight.w700, fontSize: 13)),
                                                 if (isRec) ...[
                                                   const SizedBox(width: 4),
                                                   const Icon(Icons.star, color: Colors.amber, size: 14),

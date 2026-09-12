@@ -114,7 +114,7 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
   /// ─────────────────────────────────────────
   Widget _buildStrictLayout() {
     final countdownColor = _getCountdownColor(widget.daysRemaining);
-    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+    final currencyFmt = NumberFormat.currency(locale: 'en_US', symbol: 'S/ ');
     final dateFmt = widget.cycleEndDate != null
         ? DateFormat('dd/MM').format(widget.cycleEndDate!)
         : '--/--';
@@ -469,7 +469,7 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
     final dateFmt = widget.cycleEndDate != null
         ? DateFormat('dd/MM').format(widget.cycleEndDate!)
         : '--/--';
-    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+    final currencyFmt = NumberFormat.currency(locale: 'en_US', symbol: 'S/ ');
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -576,10 +576,10 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Gastado: ', style: GoogleFonts.inter(color: Colors.white70, fontSize: 14)),
-                  Text(currencyFmt.format(widget.currentValue), style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                  Text(' / ', style: GoogleFonts.inter(color: Colors.white30, fontSize: 16)),
-                  Text(currencyFmt.format(widget.targetValue), style: GoogleFonts.inter(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text('Gastado: ', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
+                  Text(currencyFmt.format(widget.currentValue), style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text(' / ', style: GoogleFonts.inter(color: Colors.white30, fontSize: 14)),
+                  Text(currencyFmt.format(widget.targetValue), style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
                 ],
               ),
               const SizedBox(height: 8),

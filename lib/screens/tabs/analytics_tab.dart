@@ -113,7 +113,7 @@ class _AnalyticsTabState extends ConsumerState<AnalyticsTab> {
   }
 
   Widget _buildAnalyticsPage(BuildContext context, CreditCard? card, List expenses, ThemeData theme, bool isDark) {
-    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+    final currencyFmt = NumberFormat.currency(locale: 'en_US', symbol: 'S/ ');
     
     if (expenses.isEmpty) {
       return Center(

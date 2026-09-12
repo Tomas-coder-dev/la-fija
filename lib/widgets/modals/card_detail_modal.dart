@@ -18,7 +18,7 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
   final cycleExpenses = supabaseService.getCurrentCycleExpenses(card, allExpenses);
   cycleExpenses.sort((a, b) => b.fechaConsumo.compareTo(a.fechaConsumo));
 
-  final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+  final currencyFmt = NumberFormat.currency(locale: 'en_US', symbol: 'S/ ');
   final totalCycleSpent = supabaseService.getCurrentCycleConsumption(card, allExpenses);
   final daysRemaining = supabaseService.getDaysUntilCycleEnd(card);
   final bankData = BankCatalog.getBankData(card.banco);
@@ -88,6 +88,8 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 6),
                               Wrap(

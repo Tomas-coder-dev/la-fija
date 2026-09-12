@@ -79,7 +79,7 @@ class CardsTab extends ConsumerWidget {
                       child: CardProgressWidget(
                         card: card,
                         consumption: consumption,
-                        currencyFormat: NumberFormat.currency(locale: 'es_PE', symbol: 'S/ '),
+                        currencyFormat: NumberFormat.currency(locale: 'en_US', symbol: 'S/ '),
                         daysRemaining: daysRemaining,
                         onTap: () {
                           showCardDetailModal(context, card, ref);

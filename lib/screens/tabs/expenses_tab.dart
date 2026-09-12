@@ -24,7 +24,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
     final cardsState = ref.watch(cardsProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final currencyFmt = NumberFormat.currency(locale: 'es_PE', symbol: 'S/ ');
+    final currencyFmt = NumberFormat.currency(locale: 'en_US', symbol: 'S/ ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,14 +137,16 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                                   fontSize: 15,
                                 ),
                               ),
-                              Row(
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                runSpacing: 4,
                                 children: [
                                   Text(
                                     DateFormat('dd MMM yyyy, HH:mm', 'es_PE').format(exp.fechaConsumo),
                                     style: GoogleFonts.inter(color: theme.textTheme.bodySmall?.color, fontSize: 12),
                                   ),
-                                  if (cardLabel != null) ...[
-                                    const SizedBox(width: 6),
+                                  if (cardLabel != null) 
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                       decoration: BoxDecoration(
@@ -160,7 +162,6 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                                         ),
                                       ),
                                     )
-                                  ]
                                 ],
                               ),
                             ],
