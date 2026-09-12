@@ -51,6 +51,33 @@ class CardsNotifier extends StateNotifier<AsyncValue<List<CreditCard>>> {
     await loadCards(); // Refresh
   }
 
+  Future<void> updateCard({
+    required String id,
+    required String banco,
+    required String nombreTarjeta,
+    required int diaCierre,
+    required int diaPago,
+    required double metaMensual,
+    required double limiteCredito,
+    required double membershipFee,
+    required String exemptionType,
+    required double exemptionTarget,
+  }) async {
+    await _service.updateCard(
+      id: id,
+      banco: banco,
+      nombreTarjeta: nombreTarjeta,
+      diaCierre: diaCierre,
+      diaPago: diaPago,
+      metaMensual: metaMensual,
+      limiteCredito: limiteCredito,
+      membershipFee: membershipFee,
+      exemptionType: exemptionType,
+      exemptionTarget: exemptionTarget,
+    );
+    await loadCards(); // Refresh
+  }
+
   Future<void> deleteCard(String id) async {
     await _service.deleteCard(id);
     await loadCards();

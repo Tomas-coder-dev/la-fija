@@ -3,6 +3,7 @@ import 'package:google_nav_bar/google_nav_bar.dart';
 
 import 'tabs/cards_tab.dart';
 import 'tabs/expenses_tab.dart';
+import 'tabs/membership_tab.dart';
 import 'tabs/analytics_tab.dart';
 import '../widgets/modals/add_expense_modal.dart';
 import '../widgets/modals/add_card_modal.dart';
@@ -20,6 +21,7 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _tabs = [
     const CardsTab(),
     const ExpensesTab(),
+    const MembershipTab(),
     const AnalyticsTab(),
   ];
 
@@ -68,6 +70,10 @@ class _MainLayoutState extends State<MainLayout> {
                 GButton(
                   icon: Icons.receipt_long_rounded,
                   text: 'Gastos',
+                ),
+                GButton(
+                  icon: Icons.star_border_rounded,
+                  text: 'Membresía',
                 ),
                 GButton(
                   icon: Icons.bar_chart_rounded,

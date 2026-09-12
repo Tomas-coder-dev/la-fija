@@ -3,18 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/bank_catalog.dart';
+import '../../models/credit_card.dart';
 import '../../providers/cards_provider.dart';
 
-Future<void> showAddCardModal(BuildContext context) async {
+Future<void> showAddCardModal(BuildContext context, {CreditCard? cardToEdit}) async {
+  final isEditing = cardToEdit != null;
   final formKey = GlobalKey<FormState>();
-  BankData selectedBank = BankCatalog.banks.first;
-  final nombreController = TextEditingController(text: selectedBank.network);
-  final limiteController = TextEditingController();
-  final cierreController = TextEditingController();
-  final pagoController = TextEditingController();
-  final metaController = TextEditingController(text: selectedBank.defaultExemptionTarget.toString());
-  final membresiaController = TextEditingController(text: selectedBank.defaultMembershipFee.toString());
-  String exemptionType = selectedBank.defaultExemptionType;
+  
+  BankData selectedBank = isEditing 
+      ? BankCatalog.getBankData(cardToEdit.banco) 
+      : BankCatalog.banks.first;
+      
+  final nombreController = TextEditingController(text: isEditing ? cardToEdit.nombreTarjeta : selectedBank.network);
+  final limiteController = TextEditingController(text: isEditing ? cardToEdit.limiteCredito.toString() : '');
+  final cierreController = TextEditingController(text: isEditing ? cardToEdit.diaCierre.toString() : '');
+  final pagoController = TextEditingController(text: isEditing ? cardToEdit.diaPago.toString() : '');
+  final metaController = TextEditingController(text: isEditing ? cardToEdit.metaMensual.toString() : selectedBank.defaultExemptionTarget.toString());
+  final membresiaController = TextEditingController(text: isEditing ? cardToEdit.membershipFee.toString() : selectedBank.defaultMembershipFee.toString());
+  String exemptionType = isEditing ? cardToEdit.exemptionType : selectedBank.defaultExemptionType;
 
   await showModalBottomSheet(
     context: context,
@@ -58,11 +64,17 @@ Future<void> showAddCardModal(BuildContext context) async {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          Text('Nueva Tarjeta de Crédito', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: theme.textTheme.bodyLarge?.color)),
-                          const SizedBox(height: 6),
-                          Text('Elige tu banco y personaliza los detalles', style: GoogleFonts.inter(fontSize: 14, color: theme.textTheme.bodySmall?.color)),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
+                          Text(
+                            isEditing ? 'Editar Tarjeta' : 'Nueva Tarjeta de Crédito', 
+                            style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: theme.textTheme.bodyLarge?.color)
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isEditing ? 'Actualiza los detalles de tu tarjeta' : 'Elige tu banco y personaliza los detalles', 
+                            style: GoogleFonts.inter(fontSize: 14, color: theme.textTheme.bodySmall?.color)
+                          ),
+                          const SizedBox(height: 24),
 
                           // Card Preview Banner
                           Container(
@@ -71,7 +83,7 @@ Future<void> showAddCardModal(BuildContext context) async {
                               gradient: LinearGradient(colors: [selectedBank.primaryColor, selectedBank.secondaryColor]),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
-                                BoxShadow(color: selectedBank.primaryColor.withOpacity(0.4), blurRadius: 12),
+                                BoxShadow(color: selectedBank.primaryColor.withValues(alpha: 0.4), blurRadius: 12),
                               ],
                             ),
                             child: Row(
@@ -84,7 +96,7 @@ Future<void> showAddCardModal(BuildContext context) async {
                                       selectedBank.name,
                                       style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
                                     ),
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 4),
                                     Text(
                                       selectedBank.isStrictMonthly ? '⚡ Consumo vital cada mes' : '✨ Meta flexible anual',
                                       style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
@@ -92,7 +104,7 @@ Future<void> showAddCardModal(BuildContext context) async {
                                   ],
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.black26,
                                     borderRadius: BorderRadius.circular(10),
@@ -106,11 +118,11 @@ Future<void> showAddCardModal(BuildContext context) async {
                             ),
                           ),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
 
                           // Selector de Banco
                           Text('Banco y Tarjeta', style: GoogleFonts.inter(color: theme.textTheme.bodySmall?.color, fontSize: 13, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           SizedBox(
                             height: 64,
                             child: ListView.builder(
@@ -123,15 +135,21 @@ Future<void> showAddCardModal(BuildContext context) async {
                                   onTap: () {
                                     setModalState(() {
                                       selectedBank = bank;
-                                      nombreController.text = bank.network;
-                                      metaController.text = bank.defaultExemptionTarget.toString();
-                                      membresiaController.text = bank.defaultMembershipFee.toString();
+                                      if (!isEditing || nombreController.text.isEmpty) {
+                                        nombreController.text = bank.network;
+                                      }
+                                      if (!isEditing || metaController.text.isEmpty || metaController.text == '0.0') {
+                                        metaController.text = bank.defaultExemptionTarget.toString();
+                                      }
+                                      if (!isEditing || membresiaController.text.isEmpty || membresiaController.text == '0.0') {
+                                        membresiaController.text = bank.defaultMembershipFee.toString();
+                                      }
                                       exemptionType = bank.defaultExemptionType;
                                     });
                                   },
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
-                                    margin: const EdgeInsets.only(right: 10),
+                                    margin: const EdgeInsets.only(right: 12),
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                     decoration: BoxDecoration(
                                       gradient: isSelected
@@ -157,11 +175,12 @@ Future<void> showAddCardModal(BuildContext context) async {
                               },
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
 
                           Row(
                             children: [
                               Expanded(
+                                flex: 2,
                                 child: TextFormField(
                                   controller: limiteController,
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -169,27 +188,57 @@ Future<void> showAddCardModal(BuildContext context) async {
                                   validator: (v) => v!.isEmpty ? 'Requerido' : null,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 16),
                               Expanded(
+                                flex: 1,
                                 child: TextFormField(
                                   controller: cierreController,
                                   keyboardType: TextInputType.number,
-                                  decoration: _inputDecoration('Día cierre', theme),
+                                  decoration: _inputDecoration('Cierre', theme),
                                   validator: (v) => v!.isEmpty ? 'Req.' : null,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 16),
                               Expanded(
+                                flex: 1,
                                 child: TextFormField(
                                   controller: pagoController,
                                   keyboardType: TextInputType.number,
-                                  decoration: _inputDecoration('Día pago', theme),
+                                  decoration: _inputDecoration('Pago', theme),
                                   validator: (v) => v!.isEmpty ? 'Req.' : null,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: metaController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: _inputDecoration('Meta (Para no pagar membresía)', theme),
+                                  validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                                  onChanged: (_) => setModalState(() {}),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: membresiaController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: _inputDecoration('Costo Membresía Anual', theme),
+                                  validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                                  onChanged: (_) => setModalState(() {}),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 32),
                           
                           SizedBox(
                             width: double.infinity,
@@ -203,21 +252,37 @@ Future<void> showAddCardModal(BuildContext context) async {
                               onPressed: () async {
                                 if (!formKey.currentState!.validate()) return;
                                 try {
-                                  await ref.read(cardsProvider.notifier).addCard(
-                                    banco: selectedBank.name,
-                                    nombreTarjeta: nombreController.text,
-                                    diaCierre: int.parse(cierreController.text),
-                                    diaPago: int.parse(pagoController.text),
-                                    metaMensual: double.parse(metaController.text),
-                                    limiteCredito: double.parse(limiteController.text),
-                                    membershipFee: double.parse(membresiaController.text),
-                                    exemptionType: exemptionType,
-                                    exemptionTarget: double.parse(metaController.text),
-                                  );
+                                  if (isEditing) {
+                                    await ref.read(cardsProvider.notifier).updateCard(
+                                      id: cardToEdit.id,
+                                      banco: selectedBank.name,
+                                      nombreTarjeta: nombreController.text,
+                                      diaCierre: int.parse(cierreController.text),
+                                      diaPago: int.parse(pagoController.text),
+                                      metaMensual: double.parse(metaController.text),
+                                      limiteCredito: double.parse(limiteController.text),
+                                      membershipFee: double.parse(membresiaController.text),
+                                      exemptionType: exemptionType,
+                                      exemptionTarget: double.parse(metaController.text),
+                                    );
+                                  } else {
+                                    await ref.read(cardsProvider.notifier).addCard(
+                                      banco: selectedBank.name,
+                                      nombreTarjeta: nombreController.text,
+                                      diaCierre: int.parse(cierreController.text),
+                                      diaPago: int.parse(pagoController.text),
+                                      metaMensual: double.parse(metaController.text),
+                                      limiteCredito: double.parse(limiteController.text),
+                                      membershipFee: double.parse(membresiaController.text),
+                                      exemptionType: exemptionType,
+                                      exemptionTarget: double.parse(metaController.text),
+                                    );
+                                  }
+                                  
                                   if (ctx.mounted) {
                                     Navigator.pop(ctx);
                                     ScaffoldMessenger.of(ctx).showSnackBar(
-                                      const SnackBar(content: Text('Tarjeta agregada correctamente')),
+                                      SnackBar(content: Text(isEditing ? 'Tarjeta actualizada' : 'Tarjeta agregada')),
                                     );
                                   }
                                 } catch (e) {
@@ -226,7 +291,7 @@ Future<void> showAddCardModal(BuildContext context) async {
                                   }
                                 }
                               },
-                              child: Text('Guardar Tarjeta', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+                              child: Text(isEditing ? 'Guardar Cambios' : 'Agregar Tarjeta', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
                             ),
                           ),
                         ],

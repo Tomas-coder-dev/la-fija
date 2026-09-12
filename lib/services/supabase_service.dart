@@ -269,4 +269,67 @@ class SupabaseService {
             !e.fechaConsumo.isAfter(cycleEnd))
         .length;
   }
+
+  /// ─────────────────────────────────────────
+  /// ASISTENTE FINANCIERO (Recomendador)
+  /// ─────────────────────────────────────────
+
+  /// Recomienda la mejor tarjeta para un consumo dado, priorizando
+  /// tarjetas que necesitan alcanzar la meta mensual de membresía,
+  /// pero que aún no la han alcanzado, y priorizando las que están más 
+  /// cerca de cerrar su ciclo (mayor urgencia).
+  CreditCard? getRecommendedCard(List<CreditCard> cards, List<Expense> expenses, double amount) {
+    if (cards.isEmpty) return null;
+    
+    // Lista de tarjetas candidatas que necesitan consumo
+    final candidates = <Map<String, dynamic>>[];
+
+    for (final card in cards) {
+      if (card.metaMensual <= 0 && card.exemptionTarget <= 0) {
+        continue; // No requiere consumo
+      }
+
+      final isCountBased = card.exemptionType == 'count';
+      final target = card.metaMensual > 0 ? card.metaMensual : card.exemptionTarget;
+      
+      final currentConsumption = getCurrentCycleConsumption(card, expenses);
+      final currentCount = getCurrentCycleExpenseCount(card, expenses);
+      
+      final currentValue = isCountBased ? currentCount.toDouble() : currentConsumption;
+      
+      if (currentValue < target) {
+        final daysRemaining = getDaysUntilCycleEnd(card);
+        final remainingValue = target - currentValue;
+        
+        candidates.add({
+          'card': card,
+          'daysRemaining': daysRemaining,
+          'remainingValue': remainingValue,
+          'isCountBased': isCountBased,
+        });
+      }
+    }
+
+    if (candidates.isEmpty) {
+      // Si todas cumplieron la meta, simplemente retorna la primera o null (o la de mayor límite)
+      return null;
+    }
+
+    // Ordenar candidatos: primero los que tengan menos días restantes (más urgentes)
+    candidates.sort((a, b) {
+      final daysA = a['daysRemaining'] as int;
+      final daysB = b['daysRemaining'] as int;
+      
+      if (daysA != daysB) {
+        return daysA.compareTo(daysB);
+      }
+      
+      // Si tienen los mismos días, priorizar la que necesite MENOS para completarse (Quick Win)
+      final remA = a['remainingValue'] as double;
+      final remB = b['remainingValue'] as double;
+      return remA.compareTo(remB);
+    });
+
+    return candidates.first['card'] as CreditCard;
+  }
 }

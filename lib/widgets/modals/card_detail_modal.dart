@@ -9,6 +9,7 @@ import '../../models/expense_category.dart';
 import '../../providers/cards_provider.dart';
 import '../../providers/expenses_provider.dart';
 import '../../services/supabase_service.dart';
+import 'add_card_modal.dart';
 
 void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
   final supabaseService = ref.read(supabaseServiceProvider);
@@ -98,12 +99,24 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70),
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _showDeleteCardConfirmation(context, card, ref);
-                          },
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_rounded, color: Colors.white70),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                showAddCardModal(context, cardToEdit: card);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _showDeleteCardConfirmation(context, card, ref);
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
