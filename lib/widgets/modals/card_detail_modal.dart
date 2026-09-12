@@ -86,21 +86,21 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                                 style: GoogleFonts.inter(
                                   color: Colors.white,
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Row(
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
                                     child: Text('Límite: ${currencyFmt.format(card.limiteCredito)}', style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
                                   ),
-                                  const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
                                     child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(Icons.event_rounded, color: Colors.white, size: 12),
                                         const SizedBox(width: 4),
@@ -113,18 +113,22 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                             ],
                           ),
                         ),
-                        Row(
+                        Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.edit_rounded, color: Colors.white70),
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(4),
+                              icon: const Icon(Icons.edit_rounded, color: Colors.white70, size: 20),
                               onPressed: () {
                                 Navigator.pop(ctx);
                                 showAddCardModal(context, cardToEdit: card);
                               },
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70),
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(4),
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70, size: 20),
                               onPressed: () {
                                 Navigator.pop(ctx);
                                 _showDeleteCardConfirmation(context, card, ref);

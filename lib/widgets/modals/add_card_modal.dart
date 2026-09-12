@@ -180,32 +180,33 @@ Future<void> showAddCardModal(BuildContext context, {CreditCard? cardToEdit}) as
                           Row(
                             children: [
                               Expanded(
-                                flex: 2,
                                 child: TextFormField(
                                   controller: limiteController,
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: _inputDecoration('Límite S/', theme),
+                                  decoration: _inputDecoration('Límite de crédito (S/)', theme),
+                                  validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: cierreController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: _inputDecoration('Día de Cierre', theme),
                                   validator: (v) => v!.isEmpty ? 'Requerido' : null,
                                 ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
-                                flex: 1,
-                                child: TextFormField(
-                                  controller: cierreController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: _inputDecoration('Cierre', theme),
-                                  validator: (v) => v!.isEmpty ? 'Req.' : null,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                flex: 1,
                                 child: TextFormField(
                                   controller: pagoController,
                                   keyboardType: TextInputType.number,
-                                  decoration: _inputDecoration('Pago', theme),
-                                  validator: (v) => v!.isEmpty ? 'Req.' : null,
+                                  decoration: _inputDecoration('Día de Pago', theme),
+                                  validator: (v) => v!.isEmpty ? 'Requerido' : null,
                                 ),
                               ),
                             ],

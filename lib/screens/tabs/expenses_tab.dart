@@ -148,15 +148,15 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                       decoration: BoxDecoration(
-                                        color: (cardColor ?? Colors.grey).withOpacity(0.15),
+                                        color: cardColor ?? Colors.grey,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
                                         cardLabel,
                                         style: GoogleFonts.inter(
                                           fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: cardColor ?? Colors.grey,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
                                         ),
                                       ),
                                     )
