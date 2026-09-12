@@ -86,6 +86,9 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                                 style: GoogleFonts.inter(
                                   color: Colors.white,
                                   fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                               const SizedBox(height: 6),
                               Wrap(
                                 spacing: 8,

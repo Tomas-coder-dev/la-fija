@@ -133,7 +133,6 @@ class _AnalyticsTabState extends ConsumerState<AnalyticsTab> {
 
     final sortedEntries = groupedByCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-      ..sort((a, b) => b.value.compareTo(a.value));
 
     String titleText = 'Total Gastado (Este Ciclo)';
     Color cardColor1 = theme.colorScheme.primary;
@@ -299,6 +298,4 @@ class _AnalyticsTabState extends ConsumerState<AnalyticsTab> {
       ),
     );
   }
-}
-
 }
