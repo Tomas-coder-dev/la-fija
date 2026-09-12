@@ -16,4 +16,4 @@ echo "Instalando dependencias..."
 flutter pub get
 
 echo "Compilando para web..."
-flutter build web --release
+flutter build web --release --dart-define=GEMINI_API_KEY=$GEMINI_API_KEY
