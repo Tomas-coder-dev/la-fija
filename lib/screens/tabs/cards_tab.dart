@@ -60,9 +60,12 @@ class CardsTab extends ConsumerWidget {
                   await ref.read(cardsProvider.notifier).loadCards();
                   await ref.read(expensesProvider.notifier).loadAllExpenses();
                 },
-                child: ListView.builder(
+                child: ReorderableListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8).copyWith(bottom: 100),
                   itemCount: cards.length,
+                  onReorder: (oldIndex, newIndex) {
+                    ref.read(cardsProvider.notifier).reorderCards(oldIndex, newIndex);
+                  },
                   itemBuilder: (ctx, index) {
                     final card = cards[index];
                     
@@ -75,6 +78,7 @@ class CardsTab extends ConsumerWidget {
                     final daysRemaining = supabaseService.getDaysUntilCycleEnd(card);
                     
                     return Padding(
+                      key: ValueKey(card.id),
                       padding: const EdgeInsets.only(bottom: 24.0),
                       child: CardProgressWidget(
                         card: card,

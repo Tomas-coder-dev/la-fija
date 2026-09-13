@@ -82,4 +82,20 @@ class CardsNotifier extends StateNotifier<AsyncValue<List<CreditCard>>> {
     await _service.deleteCard(id);
     await loadCards();
   }
+
+  void reorderCards(int oldIndex, int newIndex) {
+    if (state.value == null) return;
+    
+    if (newIndex > oldIndex) {
+      newIndex -= 1;
+    }
+    
+    final items = List<CreditCard>.from(state.value!);
+    final item = items.removeAt(oldIndex);
+    items.insert(newIndex, item);
+    
+    state = AsyncValue.data(items);
+    // Note: If you want to persist the order, you'd need an 'order_index' column in Supabase
+    // and update it here. For now, it reorders locally for the session.
+  }
 }
