@@ -309,7 +309,8 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
             ],
           ),
         ),
-      ));
+      ),
+      );
     },
   );
 }

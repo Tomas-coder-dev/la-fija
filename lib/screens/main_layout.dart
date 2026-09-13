@@ -99,6 +99,7 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
       ),
+      ),
       floatingActionButton: _selectedIndex == 0 
           ? FloatingActionButton.extended(
               onPressed: () {

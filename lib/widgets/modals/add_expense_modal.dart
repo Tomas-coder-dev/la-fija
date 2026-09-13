@@ -431,8 +431,9 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            );
+          },
           );
         },
       );
