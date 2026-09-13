@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/bank_catalog.dart';
 import '../../models/credit_card.dart';
 import '../../providers/cards_provider.dart';
+import '../ui/custom_toast.dart';
 
 Future<void> showAddCardModal(BuildContext context, {CreditCard? cardToEdit}) async {
   final isEditing = cardToEdit != null;
@@ -282,13 +283,11 @@ Future<void> showAddCardModal(BuildContext context, {CreditCard? cardToEdit}) as
                                   
                                   if (ctx.mounted) {
                                     Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(ctx).showSnackBar(
-                                      SnackBar(content: Text(isEditing ? 'Tarjeta actualizada' : 'Tarjeta agregada')),
-                                    );
+                                    CustomToast.show(ctx, isEditing ? 'Tarjeta actualizada' : 'Tarjeta agregada');
                                   }
                                 } catch (e) {
                                   if (ctx.mounted) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                    CustomToast.show(ctx, 'Error: $e', isError: true);
                                   }
                                 }
                               },

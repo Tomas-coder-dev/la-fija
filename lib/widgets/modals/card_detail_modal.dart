@@ -11,6 +11,7 @@ import '../../models/expense_category.dart';
 import '../../providers/cards_provider.dart';
 import '../../providers/expenses_provider.dart';
 import '../../services/supabase_service.dart';
+import '../ui/custom_toast.dart';
 import 'add_card_modal.dart';
 
 void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
@@ -330,7 +331,7 @@ void _showDeleteCardConfirmation(BuildContext context, CreditCard card, WidgetRe
             Navigator.pop(ctx);
             await ref.read(cardsProvider.notifier).deleteCard(card.id);
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tarjeta eliminada')));
+              CustomToast.show(context, 'Tarjeta eliminada');
             }
           },
           child: const Text('Eliminar'),

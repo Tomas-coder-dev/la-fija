@@ -12,6 +12,7 @@ import '../../models/expense_category.dart';
 import '../../providers/cards_provider.dart';
 import '../../providers/expenses_provider.dart';
 import '../../services/ai_service.dart';
+import '../ui/custom_toast.dart';
 
 Future<void> showAddExpenseModal(BuildContext context) async {
   final formKey = GlobalKey<FormState>();
@@ -103,9 +104,7 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                 } else {
                   if (ctx.mounted) {
                     setModalState(() => isProcessingAI = false);
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('No se pudo procesar el audio con IA. Intenta de nuevo.'))
-                    );
+                    CustomToast.show(ctx, 'No se pudo procesar el audio con IA. Intenta de nuevo.', isError: true);
                   }
                 }
               }
@@ -131,12 +130,7 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                     );
                   } else {
                     if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(
-                          content: Text('El micrófono no está disponible. Revisa los permisos de tu navegador o dispositivo.'),
-                          backgroundColor: Colors.redAccent,
-                        )
-                      );
+                      CustomToast.show(ctx, 'El micrófono no está disponible. Revisa los permisos de tu dispositivo.', isError: true);
                     }
                   }
                 } else {
@@ -421,17 +415,11 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                                   );
                                   if (ctx.mounted) {
                                     Navigator.of(ctx).pop();
-                                    ScaffoldMessenger.of(ctx).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('¡Gasto registrado con éxito! 🎉'),
-                                        backgroundColor: Colors.green,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
+                                    CustomToast.show(ctx, '¡Gasto registrado con éxito! 🎉');
                                   }
                                 } catch (e) {
                                   if (ctx.mounted) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                    CustomToast.show(ctx, 'Error: $e', isError: true);
                                   }
                                 }
                               },
