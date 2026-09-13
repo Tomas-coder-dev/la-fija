@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'package:google_nav_bar/google_nav_bar.dart';
 
 import 'tabs/cards_tab.dart';
@@ -31,22 +33,27 @@ class _MainLayoutState extends State<MainLayout> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      extendBody: true,
       body: SafeArea(
+        bottom: false,
         child: IndexedStack(
           index: _selectedIndex,
           children: _tabs,
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: theme.bottomNavigationBarTheme.backgroundColor,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 20,
-              color: Colors.black.withOpacity(0.1),
-            )
-          ],
-        ),
+      bottomNavigationBar: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.bottomNavigationBarTheme.backgroundColor?.withOpacity(0.85) ?? (isDark ? const Color(0xDD12121E) : const Color(0xDDFFFFFF)),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 20,
+                  color: Colors.black.withOpacity(0.1),
+                )
+              ],
+            ),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8),
@@ -81,24 +88,32 @@ class _MainLayoutState extends State<MainLayout> {
                 ),
               ],
               selectedIndex: _selectedIndex,
-              onTabChange: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
+                onTabChange: (index) {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+              ),
             ),
           ),
         ),
       ),
       floatingActionButton: _selectedIndex == 0 
           ? FloatingActionButton.extended(
-              onPressed: () => showAddCardModal(context),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                showAddCardModal(context);
+              },
               backgroundColor: theme.colorScheme.primary,
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text('Tarjeta', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             )
           : FloatingActionButton.extended(
-              onPressed: () => showAddExpenseModal(context),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                showAddExpenseModal(context);
+              },
               backgroundColor: theme.colorScheme.primary,
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text('Gasto', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'ui/animated_number.dart';
 
 /// Un widget de progreso dinámico para la pestaña de Membresía.
 /// Soporta dos diseños visuales distintos:
@@ -577,9 +579,17 @@ class _ProgressRingWidgetState extends State<ProgressRingWidget>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text('Gastado: ', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
-                  Text(currencyFmt.format(widget.currentValue), style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                  AnimatedNumber(
+                    value: widget.currentValue,
+                    formatter: currencyFmt,
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
                   Text(' / ', style: GoogleFonts.inter(color: Colors.white30, fontSize: 14)),
-                  Text(currencyFmt.format(widget.targetValue), style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                  AnimatedNumber(
+                    value: widget.targetValue,
+                    formatter: currencyFmt,
+                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),

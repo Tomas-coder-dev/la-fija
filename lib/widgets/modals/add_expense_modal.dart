@@ -1,9 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../models/bank_catalog.dart';
+import '../ui/bouncy_button.dart';
 import '../../models/credit_card.dart';
 import '../../models/expense_category.dart';
 import '../../providers/cards_provider.dart';
@@ -142,12 +145,15 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                 }
               }
 
-              return Container(
-                margin: const EdgeInsets.only(top: 60),
-                decoration: BoxDecoration(
-                  color: theme.dialogBackgroundColor,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                ),
+              return ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 60),
+                    decoration: BoxDecoration(
+                      color: theme.dialogBackgroundColor.withOpacity(isDark ? 0.85 : 0.95),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                    ),
                 child: Padding(
                   padding: EdgeInsets.only(
                     left: 24,
@@ -258,8 +264,12 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                                 
                                 final isGoalMet = currentConsumption >= targetValue || (isCountBased && currentCount >= targetValue);
 
-                                return GestureDetector(
-                                  onTap: () => setModalState(() => selectedCard = c),
+                                return BouncyButton(
+                                  scaleFactor: 0.92,
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    setModalState(() => selectedCard = c);
+                                  },
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     margin: const EdgeInsets.only(right: 12),
@@ -330,8 +340,12 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                             itemBuilder: (context, index) {
                               final cat = ExpenseCategory.all[index];
                               final isSelected = cat.key == selectedCategory;
-                              return GestureDetector(
-                                onTap: () => setModalState(() => selectedCategory = cat.key),
+                              return BouncyButton(
+                                scaleFactor: 0.85,
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  setModalState(() => selectedCategory = cat.key);
+                                },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
                                   decoration: BoxDecoration(
@@ -394,7 +408,11 @@ Future<void> showAddExpenseModal(BuildContext context) async {
                                 elevation: 0,
                               ),
                               onPressed: () async {
-                                if (!formKey.currentState!.validate()) return;
+                                HapticFeedback.lightImpact();
+                                if (!formKey.currentState!.validate()) {
+                                  HapticFeedback.heavyImpact();
+                                  return;
+                                }
                                 try {
                                   await ref.read(expensesProvider.notifier).addExpense(
                                     tarjetaId: selectedCard!.id,

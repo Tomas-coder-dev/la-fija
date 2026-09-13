@@ -1,4 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -31,13 +33,16 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (ctx) {
-      return Container(
-        height: MediaQuery.of(ctx).size.height * 0.85,
-        decoration: BoxDecoration(
-          color: theme.dialogBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        child: Padding(
+      return ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            height: MediaQuery.of(ctx).size.height * 0.85,
+            decoration: BoxDecoration(
+              color: theme.dialogBackgroundColor.withOpacity(isDark ? 0.85 : 0.95),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -126,6 +131,7 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                               padding: const EdgeInsets.all(4),
                               icon: const Icon(Icons.edit_rounded, color: Colors.white70, size: 20),
                               onPressed: () {
+                                HapticFeedback.lightImpact();
                                 Navigator.pop(ctx);
                                 showAddCardModal(context, cardToEdit: card);
                               },
@@ -135,6 +141,7 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                               padding: const EdgeInsets.all(4),
                               icon: const Icon(Icons.delete_outline_rounded, color: Colors.white70, size: 20),
                               onPressed: () {
+                                HapticFeedback.lightImpact();
                                 Navigator.pop(ctx);
                                 _showDeleteCardConfirmation(context, card, ref);
                               },
@@ -240,6 +247,7 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
                               child: const Icon(Icons.delete_rounded, color: Colors.white),
                             ),
                             onDismissed: (_) async {
+                              HapticFeedback.lightImpact();
                               await ref.read(expensesProvider.notifier).deleteExpense(exp.id);
                             },
                             child: Container(
@@ -300,7 +308,7 @@ void showCardDetailModal(BuildContext context, CreditCard card, WidgetRef ref) {
             ],
           ),
         ),
-      );
+      ));
     },
   );
 }

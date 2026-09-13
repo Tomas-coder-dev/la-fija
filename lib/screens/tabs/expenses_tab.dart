@@ -7,6 +7,8 @@ import '../../providers/expenses_provider.dart';
 import '../../providers/cards_provider.dart';
 import '../../models/expense_category.dart';
 import '../../models/bank_catalog.dart';
+import '../../widgets/ui/shimmer_loading.dart';
+import 'package:flutter/services.dart';
 
 class ExpensesTab extends ConsumerStatefulWidget {
   const ExpensesTab({super.key});
@@ -66,7 +68,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
 
         Expanded(
           child: expensesState.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => ShimmerLoading(isDark: isDark),
             error: (err, stack) => Center(child: Text('Error: $err')),
             data: (expenses) {
               if (expenses.isEmpty) {
@@ -193,6 +195,7 @@ class _ExpensesTabState extends ConsumerState<ExpensesTab> {
     
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         setState(() {
           _selectedCardId = cardId;
         });
